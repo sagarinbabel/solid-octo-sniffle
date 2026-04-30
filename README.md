@@ -47,6 +47,8 @@ AI tools used in operational workflows need quality gates before rollout. The se
 
 ## Architecture
 
+See `docs/ARCHITECTURE.md` for the business problem, runtime flow, security boundary, local runbook, and advisory notes.
+
 ```mermaid
 flowchart TD
     A[User: Sales / Ops / Software] --> B[Next.js Frontend]
