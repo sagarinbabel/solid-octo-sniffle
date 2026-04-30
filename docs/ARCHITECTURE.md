@@ -111,6 +111,22 @@ Manual checks:
 - The browser never receives the OpenAI API key.
 - Production use would require auth, audit storage, approved model gateway, monitoring, and security review.
 
+## On-prem and confidential deployment note
+
+For real internal use, the safest deployment pattern is to keep the app, retrieval index, logs, audit store, model gateway, and model runtime inside the company-controlled environment. That can mean a private Kubernetes or VM deployment, internal network access only, SSO/RBAC, private object storage, a secrets manager, encrypted audit logs, and a self-hosted model such as an approved open-weight LLM served through an internal gateway.
+
+If the workflow handles defence-sensitive, customer-sensitive, export-controlled, regulated, or proprietary operational data, default to an on-prem or private-cloud model path. In that mode, prompts, retrieved documents, embeddings, model outputs, traces, and eval datasets never leave the company boundary. The model gateway should enforce allow-listed models, data-retention policy, prompt logging controls, rate limits, redaction, access review, and human approval rules before any customer-facing use.
+
+Cloud models can still be considered for lower-sensitivity workflows, but only behind a controlled model gateway rather than direct application calls. The gateway should redact or minimize inputs, block restricted data classes, use enterprise agreements with no training on submitted data, disable provider-side retention where available, route by sensitivity level, maintain auditable request metadata, and provide an emergency kill switch. Sensitive retrieval documents should not be sent to an external model unless security, legal, and customer commitments explicitly allow it.
+
+A practical production policy would use tiered routing:
+
+- Public or low-sensitivity internal requests: approved cloud model is acceptable with logging, retention controls, and no secrets.
+- Customer-sensitive commercial requests: cloud model only after redaction/minimization and contractual no-training/no-retention guarantees, otherwise private model.
+- Defence, government, security, critical infrastructure, or export-controlled requests: private/on-prem model by default, with human approval and strict audit controls.
+
+The key design principle is that the application should not know provider-specific secrets or make direct uncontrolled model calls. It should call an internal model gateway that owns policy, routing, redaction, monitoring, and audit.
+
 ## Current npm advisory note
 
 `npm audit` reports a moderate PostCSS advisory through Next.js:
