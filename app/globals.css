@@ -1,0 +1,33 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #0c0f14;
+  --surface: #141a22;
+  --surface-2: #1a222d;
+  --border: #2a3544;
+  --text: #e8edf4;
+  --muted: #8b9cb3;
+  --accent: #3d8bfd;
+  --accent-dim: #2563c4;
+  --warn: #f59e0b;
+  --danger: #ef4444;
+  --ok: #22c55e;
+}
+
+body {
+  color: var(--text);
+  background: var(--bg);
+  font-feature-settings: "rlig" 1, "calt" 1;
+}
+
+/* subtle grid for internal-tool feel */
+.bg-grid {
+  background-image: linear-gradient(
+      rgba(42, 53, 68, 0.35) 1px,
+      transparent 1px
+    ),
+    linear-gradient(90deg, rgba(42, 53, 68, 0.35) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
