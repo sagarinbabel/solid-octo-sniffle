@@ -15,6 +15,8 @@ const requestSchema = z.object({
 
 const missingLocalKeyError =
   "OpenAI API key is missing from .env.local. This prototype intentionally ignores shell environment keys. Create .env.local from .env.example, add OPENAI_API_KEY, then restart npm run dev.";
+const missingProductionKeyError =
+  "OpenAI API key is missing from the server environment. Add OPENAI_API_KEY in your hosting provider's secure environment variable settings and redeploy.";
 
 const SYSTEM_PROMPT = `You are an internal AI request triage assistant for a dual-use deep-tech company. Your job is to protect software and operations teams from vague requests while helping Sales get useful answers faster. Turn messy customer/internal requests into structured, reviewable work. Do not promise feasibility. Do not allow direct software interruption unless the request is clear, urgent, and sufficiently specified. Flag missing information. Flag defence/customer-sensitive topics. Prefer asking for clarification before routing vague work to Software. Output valid JSON only.`;
 
@@ -80,6 +82,20 @@ function readLocalOpenAiKey() {
   return rawValue.replace(/^['"]|['"]$/g, "");
 }
 
+function readOpenAiKey() {
+  if (process.env.NODE_ENV === "production") {
+    return {
+      apiKey: process.env.OPENAI_API_KEY?.trim() ?? "",
+      missingKeyError: missingProductionKeyError,
+    };
+  }
+
+  return {
+    apiKey: readLocalOpenAiKey(),
+    missingKeyError: missingLocalKeyError,
+  };
+}
+
 export async function POST(request: Request) {
   const model = process.env.AI_MODEL || "gpt-4.1-mini";
   const timestamp = new Date().toISOString();
@@ -95,10 +111,10 @@ export async function POST(request: Request) {
       );
     }
 
-    const openAiApiKey = readLocalOpenAiKey();
+    const { apiKey: openAiApiKey, missingKeyError } = readOpenAiKey();
     if (!openAiApiKey) {
       return NextResponse.json(
-        { error: missingLocalKeyError },
+        { error: missingKeyError },
         { status: 500 },
       );
     }

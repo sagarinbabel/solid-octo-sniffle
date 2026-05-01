@@ -12,10 +12,12 @@ vi.mock("openai", () => ({
 describe("POST /api/analyse", () => {
   const originalKey = process.env.OPENAI_API_KEY;
   const originalModel = process.env.AI_MODEL;
+  const originalNodeEnv = process.env.NODE_ENV;
   const envLocalPath = join(process.cwd(), ".env.local");
   const originalEnvLocal = existsSync(envLocalPath) ? readFileSync(envLocalPath, "utf8") : null;
 
   beforeEach(() => {
+    vi.stubEnv("NODE_ENV", "development");
     if (existsSync(envLocalPath)) {
       unlinkSync(envLocalPath);
     }
@@ -39,6 +41,10 @@ describe("POST /api/analyse", () => {
       process.env.AI_MODEL = originalModel;
     } else {
       delete process.env.AI_MODEL;
+    }
+    vi.unstubAllEnvs();
+    if (originalNodeEnv) {
+      process.env.NODE_ENV = originalNodeEnv;
     }
   });
 
@@ -120,5 +126,61 @@ describe("POST /api/analyse", () => {
     expect(payload.safetyResult.score).toBe(100);
     expect(JSON.stringify(payload)).not.toContain("test-local-file-key");
     expect(openAiConstructor).toHaveBeenCalledWith({ apiKey: "test-local-file-key" });
+  });
+
+  it("uses server environment variables in production for hosted deployment", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    process.env.OPENAI_API_KEY = "production-host-key";
+    process.env.AI_MODEL = "production-model";
+    openAiConstructor.mockImplementation(function OpenAI() {
+      return {
+        chat: {
+          completions: {
+            create: vi.fn().mockResolvedValue({
+              choices: [
+                {
+                  message: {
+                    content: JSON.stringify({
+                      clean_title: "Ops dashboard request needs discovery",
+                      summary: "Ops wants an automated dashboard and needs source-system and permission discovery.",
+                      request_type: "Internal ops workflow",
+                      urgency: "Medium",
+                      business_value: "Medium",
+                      technical_complexity: "High",
+                      sensitivity: "Unknown",
+                      missing_information: ["Data sources", "Permissions", "Update cadence"],
+                      suggested_route: "Operations + Product + Software discovery",
+                      suggested_next_action: "Approve discovery before implementation.",
+                      software_interrupt_allowed: false,
+                      draft_clarification_to_sales: "Please confirm source systems, owners, permissions, and update cadence.",
+                      risk_flags: ["Integration risk", "Permission review required"],
+                      recommended_status: "Approve discovery",
+                      audit_notes: ["Referenced MOCKED Software Team Interruption Policy."],
+                      confidence: 0.78,
+                    }),
+                  },
+                },
+              ],
+            }),
+          },
+        },
+      };
+    });
+
+    const response = await POST(
+      new Request("http://localhost/api/analyse", {
+        method: "POST",
+        body: JSON.stringify({
+          requestText:
+            "Customer/opportunity: Internal Operations. Request summary: Ops wants a dashboard connected to internal systems. Deadline: Unknown. Need from Software/Ops: discovery.",
+        }),
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    const payload = await response.json();
+    expect(payload.model).toBe("production-model");
+    expect(JSON.stringify(payload)).not.toContain("production-host-key");
+    expect(openAiConstructor).toHaveBeenCalledWith({ apiKey: "production-host-key" });
   });
 });

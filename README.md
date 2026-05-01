@@ -86,8 +86,9 @@ flowchart TD
 
 ## Security assumptions
 
-- API key is loaded server-side only from `.env.local`.
-- Shell-exported `OPENAI_API_KEY` values are intentionally ignored for local safety.
+- In local development, the API key is loaded server-side only from `.env.local`.
+- In production, the API key is loaded from the host's server-side environment variables, such as Vercel Project Settings.
+- Shell-exported `OPENAI_API_KEY` values are intentionally ignored during local development for safety.
 - `.env.local` is ignored.
 - No confidential Kelluu data is used.
 - No external actions are taken.
@@ -115,7 +116,7 @@ OPENAI_API_KEY=your_server_side_key
 AI_MODEL=gpt-4.1-mini
 ```
 
-Never use `NEXT_PUBLIC_OPENAI_API_KEY`. The browser calls `/api/analyse`; only the server route calls OpenAI. The local prototype intentionally reads `OPENAI_API_KEY` from `.env.local` and ignores keys exported in your shell environment.
+Never use `NEXT_PUBLIC_OPENAI_API_KEY`. The browser calls `/api/analyse`; only the server route calls OpenAI. Local development reads `OPENAI_API_KEY` from `.env.local` and ignores keys exported in your shell environment. Production reads `OPENAI_API_KEY` from secure server-side hosting settings.
 
 ## How to test locally
 
@@ -141,6 +142,7 @@ Manual paths:
 
 - Set `OPENAI_API_KEY` and `AI_MODEL` as environment variables in Vercel.
 - Never expose the API key to the browser.
+- Do not commit `.env.local`; production secrets belong in Vercel Project Settings or a secrets manager.
 - Configure domain and deployment environment.
 - Monitor usage and costs.
 - Add authentication before any real deployment.

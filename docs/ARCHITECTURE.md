@@ -107,6 +107,8 @@ Manual checks:
 - Mocked context is hardcoded and labeled mocked.
 - No external action is taken.
 - No CRM, ERP, ticketing, repo, or internal-doc integration is implemented.
+- In local development, the server reads `OPENAI_API_KEY` from `.env.local` only.
+- In production, the server reads `OPENAI_API_KEY` from the host's encrypted server-side environment settings, such as Vercel Environment Variables.
 - The browser never receives the OpenAI API key.
 - Production use would require auth, audit storage, approved model gateway, monitoring, and security review.
 
