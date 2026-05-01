@@ -151,6 +151,7 @@ Manual paths:
 
 ## Future hardening
 
+- See `TODO.md` for next prototype UX improvements.
 - SSO/RBAC
 - audit DB
 - approved model gateway
