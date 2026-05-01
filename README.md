@@ -8,7 +8,7 @@ Kelluu is positioned publicly around persistent autonomous aerial data for defen
 
 ## Business problem
 
-Fast-growing dual-use deep-tech companies can lose engineering focus when vague customer or internal requests arrive as urgent software interruptions. AI Request Triage gives Sales a structured portal for messy requests and gives the Head of Software a clean queue for review, routing, rejection, discovery approval, or clarification.
+Fast-growing dual-use deep-tech companies can lose engineering focus when vague customer or internal requests arrive as urgent software interruptions. AI Request Triage turns messy sales/customer requests into structured, reviewable work for software and operations teams.
 
 ## What it demonstrates
 

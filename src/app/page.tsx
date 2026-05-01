@@ -224,7 +224,11 @@ export default function Home() {
       });
       const payload = await response.json();
       if (!response.ok) {
-        setError(payload.error || "AI triage failed.");
+        setError(payload.error || "AI triage failed. Check your API key and try again.");
+        return;
+      }
+      if (!payload.result || !payload.safetyResult) {
+        setError("AI triage returned an incomplete response. Check the server logs and try again.");
         return;
       }
 
@@ -266,7 +270,7 @@ export default function Home() {
             <div>
               <h1 className="text-4xl font-bold tracking-tight md:text-6xl">AI Request Triage</h1>
               <p className="mt-4 max-w-3xl text-lg text-slate-300">
-                Turns messy sales/customer requests into structured, reviewable work before they interrupt software and operations teams.
+                Turns messy sales/customer requests into structured, reviewable work for software and operations teams.
               </p>
             </div>
             <div className="flex flex-wrap gap-2">

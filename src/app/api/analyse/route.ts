@@ -78,7 +78,10 @@ export async function POST(request: Request) {
 
     if (!process.env.OPENAI_API_KEY) {
       return NextResponse.json(
-        { error: "Missing server-side API key. Add OPENAI_API_KEY to .env.local." },
+        {
+          error:
+            "OpenAI API key is missing. Create .env.local from .env.example, add OPENAI_API_KEY, then restart npm run dev.",
+        },
         { status: 500 },
       );
     }
@@ -102,11 +105,11 @@ export async function POST(request: Request) {
 
     const rawJson = JSON.parse(extractJson(content));
     const result = triageSchema.parse(rawJson);
-    const evalResult = runSafetyChecks(parsedRequest.data.requestText, result);
+    const safetyResult = runSafetyChecks(parsedRequest.data.requestText, result);
 
     return NextResponse.json({
       result,
-      evalResult,
+      safetyResult,
       model,
       timestamp,
     });

@@ -39,7 +39,8 @@ describe("POST /api/analyse", () => {
 
     expect(response.status).toBe(500);
     await expect(response.json()).resolves.toEqual({
-      error: "Missing server-side API key. Add OPENAI_API_KEY to .env.local.",
+      error:
+        "OpenAI API key is missing. Create .env.local from .env.example, add OPENAI_API_KEY, then restart npm run dev.",
     });
     expect(openAiConstructor).not.toHaveBeenCalled();
   });
@@ -98,7 +99,7 @@ describe("POST /api/analyse", () => {
     expect(payload.model).toBe("test-model");
     expect(payload.result.software_interrupt_allowed).toBe(false);
     expect(payload.result.sensitivity).toBe("Defence-sensitive");
-    expect(payload.evalResult.score).toBe(100);
+    expect(payload.safetyResult.score).toBe(100);
     expect(JSON.stringify(payload)).not.toContain("test-server-key");
   });
 });

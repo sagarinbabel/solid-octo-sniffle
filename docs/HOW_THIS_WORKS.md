@@ -2,6 +2,8 @@
 
 AI Request Triage is a role-based internal request triage prototype for a fast-growing dual-use deep-tech company.
 
+Turns messy sales/customer requests into structured, reviewable work for software and operations teams.
+
 ## Prototype navigation
 
 Sales Portal | Head of Software Queue | How it Works
