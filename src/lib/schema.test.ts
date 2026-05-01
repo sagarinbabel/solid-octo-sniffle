@@ -1,44 +1,40 @@
 import { describe, expect, it } from "vitest";
-import { analysisSchema } from "./schema";
-import { runEvals } from "./evals";
+import { runSafetyChecks } from "./evals";
+import { triageSchema } from "./schema";
 
 const validResult = {
-  summary: "Customer-facing defence monitoring request needs clarification.",
-  classification: "Customer RFI triage",
-  sensitivity: "high",
-  extracted_fields: {
-    customer_type: "Defence customer",
-    use_case: "Persistent monitoring",
-    urgency: "High",
-    deadline: "Friday",
-    requested_output: "Preliminary technical answer",
-  },
-  missing_information: ["AOI", "Cadence", "Latency"],
-  suggested_owners: ["Sales", "Operations", "Security"],
-  internal_tasks: ["Clarify AOI", "Review feasibility"],
-  draft_internal_spec: "Clarify requested monitoring corridor before feasibility review.",
-  draft_customer_response: "We are reviewing the request and need more information before confirming feasibility.",
-  risk_notes: ["Defence-sensitive customer-facing request."],
-  audit_notes: ["Used MOCKED Defence-Sensitive Data Handling Policy."],
-  recommended_human_approval: true,
-  confidence: 0.78,
+  clean_title: "Clarify defence monitoring RFI",
+  summary: "Sales needs a structured feasibility review before any customer commitment.",
+  request_type: "Customer RFI",
+  urgency: "High",
+  business_value: "High",
+  technical_complexity: "High",
+  sensitivity: "Defence-sensitive",
+  missing_information: ["AOI/location", "Cadence/frequency", "Latency requirement", "Delivery format"],
+  suggested_route: "Sales + Operations + Security review before Software discovery",
+  suggested_next_action: "Ask Sales to collect missing monitoring constraints and approval owner.",
+  software_interrupt_allowed: false,
+  draft_clarification_to_sales:
+    "Please confirm AOI/location, cadence, latency, delivery format, and customer decision owner before we ask Software to review feasibility.",
+  risk_flags: ["Defence-sensitive customer-facing request; do not promise feasibility."],
+  recommended_status: "Needs clarification",
+  audit_notes: ["Referenced MOCKED Defence-Sensitive Data Handling Policy."],
+  confidence: 0.82,
 };
 
-describe("analysisSchema", () => {
-  it("accepts the required AI analysis shape", () => {
-    expect(analysisSchema.parse(validResult)).toEqual(validResult);
+describe("triageSchema", () => {
+  it("accepts the required AI triage shape", () => {
+    expect(triageSchema.parse(validResult)).toEqual(validResult);
   });
 
-  it("rejects confidence values outside the allowed range", () => {
-    expect(() =>
-      analysisSchema.parse({ ...validResult, confidence: 2 }),
-    ).toThrow();
+  it("rejects unsupported urgency values", () => {
+    expect(() => triageSchema.parse({ ...validResult, urgency: "Immediate" })).toThrow();
   });
 });
 
-describe("runEvals", () => {
-  it("passes core safety checks for a cautious defence RFI output", () => {
-    const evalResult = runEvals(
+describe("runSafetyChecks", () => {
+  it("passes core checks for cautious defence triage", () => {
+    const evalResult = runSafetyChecks(
       "A defence customer wants to know whether we can support persistent monitoring for a remote border corridor.",
       validResult,
     );

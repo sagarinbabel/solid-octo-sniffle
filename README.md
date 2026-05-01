@@ -1,33 +1,37 @@
-# AI Request Backbone — Kelluu Core AI Architect Prototype
+# AI Request Triage — Kelluu Core AI Architect Prototype
 
 ## Context
 
-This prototype was built by/for Sagar Dubey as a demonstration for the Kelluu Core AI Architect application. It explores how messy sales/customer/ops requests could be turned into structured, auditable, human-reviewable internal AI workflows.
+This prototype was built by/for Sagar Dubey as a demonstration for the Kelluu Core AI Architect application. It translates a broad need for an internal AI workflow backbone into a concrete request-triage workflow for Sales, customer-facing teams, Software, and Operations.
 
 Kelluu is positioned publicly around persistent autonomous aerial data for defence, critical infrastructure, digital twins, environmental intelligence, and complex operating environments. This prototype uses that public positioning only to shape product messaging. It does not use confidential Kelluu data.
 
+## Business problem
+
+Fast-growing dual-use deep-tech companies can lose engineering focus when vague customer or internal requests arrive as urgent software interruptions. AI Request Triage gives Sales a structured portal for messy requests and gives the Head of Software a clean queue for review, routing, rejection, discovery approval, or clarification.
+
 ## What it demonstrates
 
-- live LLM-based request analysis
+- live server-side LLM-based request triage
 - structured JSON output
 - mocked retrieval context
-- sensitivity classification
+- sensitivity and risk classification
 - missing-information detection
-- owner routing
-- human approval gates
-- lightweight evals
-- auditability
+- recommended routing and next action
+- software-interrupt gating
+- local safety checks inside the Head of Software Queue
+- auditability and human review
 - production architecture thinking
 
 ## What is real
 
 - live LLM API call
-- server-side API route
+- server-side Next.js API route
 - structured output
 - Zod schema validation
-- local rule-based evals
+- local rule-based safety checks
 - mocked context injection
-- UI flow
+- role-based UI flow
 - local testing path
 
 ## What is mocked
@@ -41,27 +45,23 @@ Kelluu is positioned publicly around persistent autonomous aerial data for defen
 - production monitoring
 - real customer workflows
 
-## Why evals are included
-
-AI tools used in operational workflows need quality gates before rollout. The seed eval harness checks structure, safety, missing information, approval behavior, owner routing, risk notes, and unsupported commitments. These checks are lightweight and useful for fast iteration, but they are not proof of full production safety.
-
 ## Architecture
 
-See `docs/ARCHITECTURE.md` for the business problem, runtime flow, security boundary, local runbook, and advisory notes.
+See `docs/ARCHITECTURE.md` for the runtime flow, security boundary, on-prem/private model note, local runbook, and advisory notes.
 
 ```mermaid
 flowchart TD
-    A[User: Sales / Ops / Software] --> B[Next.js Frontend]
+    A[Sales / Customer-Facing User] --> B[Sales Portal]
     B --> C[/api/analyse - Server Only]
     C --> D[Prompt Builder]
     D --> E[Mock Retrieval Context]
     D --> F[Live LLM API]
     F --> G[Structured JSON Parser]
     G --> H[Zod Schema Validation]
-    H --> I[Rule-Based Eval Runner]
-    I --> J[AI Analysis UI]
-    I --> K[Eval Suite UI]
-    J --> L[Human Approval / Audit Trail]
+    H --> I[Local Safety Check Runner]
+    I --> J[Head of Software Queue]
+    J --> K[Route / Reject / Approve Discovery / Ask Clarification]
+    K --> L[Local Status Update + Audit Trail]
 
     subgraph Future Production Hardening - Not Implemented
         M[SSO / RBAC]
@@ -91,7 +91,7 @@ flowchart TD
 - No confidential Kelluu data is used.
 - No external actions are taken.
 - No production systems are connected.
-- Customer-facing drafts require human approval.
+- Customer-facing commitments require human approval.
 - Real production use would need security review.
 
 ## How to run locally
@@ -122,20 +122,19 @@ Run automated checks:
 
 ```bash
 npm run test
+npm run lint
 npm run build
 ```
 
 Manual paths:
 
-1. App startup: run `npm install`, `cp .env.example .env.local`, and `npm run dev`; expect the app at http://localhost:3000 with a visible sample request and no hydration errors.
-2. Missing API key: remove `OPENAI_API_KEY` from `.env.local`, restart dev server, click “Analyse with AI”; expect a clear missing-key error and no exposed key or stack trace.
-3. Defence RFI: expect non-low sensitivity, human approval, missing AOI/cadence/latency/delivery/feasibility details, cautious customer draft, Sales plus technical/security owners, and mostly passing evals.
-4. Vague sales request: expect clarification questions, no immediate urgent software build, Sales/Product/Software review, and missing-information eval coverage.
-5. Unsafe promise: expect a block/caution against autonomous customer promises, human approval, feasibility caveats, defence/customer risk flags, and no unsupported commitment language.
-6. Internal ops dashboard: expect internal software/ops classification, missing data sources, Ops/Software/Product/Security owners, integration and permission risks, and reasonable tasks.
-7. Eval Suite: expect score, individual pass/fail/warning checks, and “This is a seed eval harness, not proof of full safety.”
-8. Architecture page: expect current architecture, future production architecture, and future items marked not implemented.
-9. README: expect real/mocked scope, eval rationale, run instructions, security notes, and architecture diagram.
+1. App startup: run `npm install`, `cp .env.example .env.local`, and `npm run dev`; expect the Sales Portal at http://localhost:3000.
+2. Missing API key: remove `OPENAI_API_KEY` from `.env.local`, restart dev server, click “Submit for AI triage”; expect a clear missing-key error and no stack trace.
+3. Sales Portal: fill the customer/opportunity, request summary, deadline, software/ops need, commitment, and sensitivity fields.
+4. Head of Software Queue: verify submitted/seeded requests show status, deadline, sensitivity, missing info count, and suggested route.
+5. Queue detail: verify original request, clean title, summary, urgency, business value, technical complexity, suggested next action, software-interrupt gate, clarification draft, risk flags, recommended status, safety checks, and audit trail.
+6. Queue actions: click Ask Sales for clarification, Route to Software, Route to Ops, Route to Security, Approve discovery, and Reject / not now; expect local status updates.
+7. How it Works: verify the six-step explanation and prototype boundary statement.
 
 ## Production deployment notes
 
@@ -145,6 +144,7 @@ Manual paths:
 - Monitor usage and costs.
 - Add authentication before any real deployment.
 - Do not use real company or customer data until security review.
+- For sensitive production workflows, prefer a company-controlled deployment and private/on-prem model path by default.
 
 ## Future hardening
 
@@ -154,7 +154,7 @@ Manual paths:
 - on-prem/private model option
 - secrets manager
 - prompt-injection testing
-- golden eval dataset
+- golden safety-check dataset
 - regression tests before model/prompt changes
 - integration with ticketing/CRM/docs/repos
 - monitoring for cost/latency/failure rates

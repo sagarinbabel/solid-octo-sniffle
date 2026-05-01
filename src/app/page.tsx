@@ -1,36 +1,124 @@
 "use client";
 
-import { useState } from "react";
-import { mockedContextSnippets } from "@/lib/context";
-import { runEvals } from "@/lib/evals";
+import { useMemo, useState } from "react";
 import { sampleRequests } from "@/lib/samples";
-import type { AnalyseResponse, AnalysisResult, EvalResult } from "@/lib/schema";
+import type { EvalCheck, EvalResult, TriageResult } from "@/lib/schema";
 
-type Tab = "intake" | "analysis" | "approval" | "evals" | "architecture";
+type View = "sales" | "queue" | "works";
+type CommitmentNeeded = "Yes" | "No";
+type SensitivityInput = "Normal" | "Customer confidential" | "Defence-sensitive" | "Unknown";
 
-const tabs: { id: Tab; label: string }[] = [
-  { id: "intake", label: "Request Intake" },
-  { id: "analysis", label: "AI Analysis" },
-  { id: "approval", label: "Approval & Audit" },
-  { id: "evals", label: "Eval Suite" },
-  { id: "architecture", label: "Architecture" }
+type SalesForm = {
+  customerName: string;
+  requestSummary: string;
+  deadline: string;
+  softwareNeed: string;
+  commitmentNeeded: CommitmentNeeded;
+  sensitivity: SensitivityInput;
+};
+
+type QueueItem = {
+  id: string;
+  customerName: string;
+  deadline: string;
+  originalRequest: string;
+  status: string;
+  submittedAt: string;
+  triage: TriageResult;
+  evalResult: EvalResult;
+  model: string;
+  timestamp: string;
+};
+
+const views: { id: View; label: string }[] = [
+  { id: "sales", label: "Sales Portal" },
+  { id: "queue", label: "Head of Software Queue" },
+  { id: "works", label: "How it Works" },
 ];
 
-const ownerAllowList = ["Sales", "Operations", "Software", "Security", "Compliance", "Product", "Delivery"];
+const emptyForm: SalesForm = {
+  customerName: "",
+  requestSummary: sampleRequests[0].requestSummary,
+  deadline: "Friday",
+  softwareNeed: "A preliminary technical answer that Sales can use for an internal review before replying.",
+  commitmentNeeded: "No",
+  sensitivity: "Defence-sensitive",
+};
 
-function InfoPill({ children }: { children: React.ReactNode }) {
-  return <span className="rounded-full border border-slate-700 bg-slate-900 px-3 py-1 text-xs text-slate-300">{children}</span>;
+const seededQueueItem: QueueItem = {
+  id: "seed-defence-rfi",
+  customerName: "MOCK Defence opportunity",
+  deadline: "Friday",
+  originalRequest: sampleRequests[0].requestSummary,
+  status: "Needs clarification",
+  submittedAt: "Seeded mocked example",
+  model: "mocked-seed-output",
+  timestamp: new Date("2026-04-30T18:00:00Z").toISOString(),
+  triage: {
+    clean_title: "Clarify persistent border monitoring RFI before software review",
+    summary:
+      "Sales needs a cautious internal feasibility review for a defence customer asking about persistent remote border monitoring.",
+    request_type: "Customer RFI triage",
+    urgency: "High",
+    business_value: "High",
+    technical_complexity: "High",
+    sensitivity: "Defence-sensitive",
+    missing_information: [
+      "AOI/location and corridor dimensions",
+      "Required revisit cadence or persistence expectation",
+      "Latency and delivery format requirements",
+      "Environmental and winter operating constraints",
+    ],
+    suggested_route: "Sales + Operations + Security before Software discovery",
+    suggested_next_action: "Ask Sales to collect missing operational details and route to Security/Ops for review.",
+    software_interrupt_allowed: false,
+    draft_clarification_to_sales:
+      "Before Software reviews this, please confirm the AOI, cadence, latency target, delivery format, winter constraints, and who can approve any customer-facing statement.",
+    risk_flags: [
+      "Defence-sensitive customer context",
+      "Potential unsupported feasibility commitment",
+      "Software interruption risk before requirements are clear",
+    ],
+    recommended_status: "Ask Sales for clarification",
+    audit_notes: [
+      "Seeded mocked output",
+      "Referenced MOCKED Defence-Sensitive Data Handling Policy",
+      "Referenced MOCKED Software Team Interruption Policy",
+    ],
+    confidence: 0.84,
+  },
+  evalResult: {
+    score: 100,
+    disclaimer: "This is a seed safety-check harness, not proof of full safety.",
+    checks: [
+      {
+        id: "structured-output",
+        label: "Structured output valid",
+        status: "pass",
+        explanation: "Seeded output follows the triage schema.",
+      },
+      {
+        id: "interrupt-control",
+        label: "Software interrupt control",
+        status: "pass",
+        explanation: "Software interruption is blocked while missing information is substantial.",
+      },
+    ],
+  },
+};
+
+function Pill({ children, tone = "slate" }: { children: React.ReactNode; tone?: "slate" | "cyan" | "amber" | "rose" | "emerald" }) {
+  const styles = {
+    slate: "border-slate-700 bg-slate-900 text-slate-300",
+    cyan: "border-cyan-300/40 bg-cyan-300/10 text-cyan-100",
+    amber: "border-amber-300/40 bg-amber-300/10 text-amber-100",
+    rose: "border-rose-300/40 bg-rose-300/10 text-rose-100",
+    emerald: "border-emerald-300/40 bg-emerald-300/10 text-emerald-100",
+  };
+  return <span className={`inline-flex max-w-full rounded-full border px-3 py-1 text-xs font-semibold leading-5 ${styles[tone]}`}>{children}</span>;
 }
 
-function SectionCard({
-  title,
-  children,
-  eyebrow
-}: {
-  title: string;
-  children: React.ReactNode;
-  eyebrow?: string;
-}) {
+function Card({ title, eyebrow, children }: { title: string; eyebrow?: string; children: React.ReactNode }) {
   return (
     <section className="rounded-2xl border border-slate-800 bg-slate-950/80 p-5 shadow-xl shadow-slate-950/30">
       {eyebrow ? <p className="mb-2 text-xs font-semibold uppercase tracking-[0.24em] text-cyan-300">{eyebrow}</p> : null}
@@ -40,7 +128,31 @@ function SectionCard({
   );
 }
 
-function ListBlock({ items, empty = "None reported." }: { items?: string[]; empty?: string }) {
+function TextField({
+  label,
+  value,
+  onChange,
+  placeholder,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+}) {
+  return (
+    <label className="block">
+      <span className="text-sm font-semibold text-slate-200">{label}</span>
+      <input
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder={placeholder}
+        className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-900 p-3 text-slate-100 outline-none ring-cyan-300 focus:ring-2"
+      />
+    </label>
+  );
+}
+
+function ListBlock({ items, empty = "None listed." }: { items?: string[]; empty?: string }) {
   if (!items?.length) {
     return <p className="text-slate-500">{empty}</p>;
   }
@@ -55,361 +167,412 @@ function ListBlock({ items, empty = "None reported." }: { items?: string[]; empt
   );
 }
 
-function KeyValueGrid({ result }: { result: AnalysisResult }) {
-  const entries = Object.entries(result.extracted_fields);
-  return (
-    <div className="grid gap-3 md:grid-cols-2">
-      {entries.map(([key, value]) => (
-        <div key={key} className="rounded-xl border border-slate-800 bg-slate-900/60 p-3">
-          <p className="text-xs uppercase tracking-[0.18em] text-slate-500">{key.replaceAll("_", " ")}</p>
-          <p className="mt-1 text-slate-200">{value || "Unknown"}</p>
-        </div>
-      ))}
-    </div>
-  );
+function CheckBadge({ status }: { status: EvalCheck["status"] }) {
+  const tone = status === "pass" ? "emerald" : status === "fail" ? "rose" : "amber";
+  return <Pill tone={tone}>{status.toUpperCase()}</Pill>;
 }
 
-function EvalBadge({ status }: { status: "pass" | "fail" | "warning" }) {
-  const styles = {
-    pass: "border-emerald-400/40 bg-emerald-400/10 text-emerald-200",
-    fail: "border-rose-400/40 bg-rose-400/10 text-rose-200",
-    warning: "border-amber-400/40 bg-amber-400/10 text-amber-200"
-  };
-  return <span className={`rounded-full border px-2 py-1 text-xs font-semibold uppercase ${styles[status]}`}>{status}</span>;
+function buildRequestText(form: SalesForm) {
+  return [
+    `Customer / opportunity name: ${form.customerName || "Unknown"}`,
+    `Request summary: ${form.requestSummary}`,
+    `Deadline: ${form.deadline || "Unknown"}`,
+    `What Sales needs from Software/Ops: ${form.softwareNeed}`,
+    `Customer-facing commitment needed: ${form.commitmentNeeded}`,
+    `Sales-selected sensitivity: ${form.sensitivity}`,
+  ].join("\n");
 }
 
 export default function Home() {
-  const [activeTab, setActiveTab] = useState<Tab>("intake");
-  const [requestText, setRequestText] = useState(sampleRequests[0].text);
-  const [selectedSample, setSelectedSample] = useState(sampleRequests[0].id);
-  const [analysis, setAnalysis] = useState<AnalyseResponse | null>(null);
+  const [activeView, setActiveView] = useState<View>("sales");
+  const [form, setForm] = useState<SalesForm>(emptyForm);
+  const [selectedSampleId, setSelectedSampleId] = useState(sampleRequests[0].id);
+  const [queue, setQueue] = useState<QueueItem[]>([seededQueueItem]);
+  const [selectedId, setSelectedId] = useState(seededQueueItem.id);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [batchEvals, setBatchEvals] = useState<{ title: string; evalResult: EvalResult }[]>([]);
 
-  const currentEval = analysis?.result ? runEvals(requestText, analysis.result) : null;
+  const selectedItem = useMemo(() => queue.find((item) => item.id === selectedId) ?? queue[0], [queue, selectedId]);
 
-  async function analyseRequest() {
+  function updateForm<K extends keyof SalesForm>(key: K, value: SalesForm[K]) {
+    setForm((current) => ({ ...current, [key]: value }));
+  }
+
+  function applySample(sampleId: string) {
+    const sample = sampleRequests.find((item) => item.id === sampleId);
+    if (!sample) return;
+    setSelectedSampleId(sampleId);
+    setForm({
+      customerName: sample.customerName,
+      requestSummary: sample.requestSummary,
+      deadline: sample.deadline,
+      softwareNeed: sample.softwareNeed,
+      commitmentNeeded: sample.commitmentNeeded,
+      sensitivity: sample.sensitivity,
+    });
+  }
+
+  async function submitForTriage() {
     setLoading(true);
     setError("");
     try {
+      const originalRequest = buildRequestText(form);
       const response = await fetch("/api/analyse", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ requestText })
+        body: JSON.stringify({ requestText: originalRequest }),
       });
       const payload = await response.json();
       if (!response.ok) {
-        setError(payload.error || "Analysis failed.");
+        setError(payload.error || "AI triage failed.");
         return;
       }
-      setAnalysis(payload);
-      setActiveTab("analysis");
+
+      const nextItem: QueueItem = {
+        id: crypto.randomUUID(),
+        customerName: form.customerName || "Unnamed opportunity",
+        deadline: form.deadline || "Unknown",
+        originalRequest,
+        status: payload.result.recommended_status,
+        submittedAt: new Date().toLocaleString(),
+        triage: payload.result,
+        evalResult: payload.safetyResult,
+        model: payload.model,
+        timestamp: payload.timestamp,
+      };
+      setQueue((current) => [nextItem, ...current]);
+      setSelectedId(nextItem.id);
+      setActiveView("queue");
     } catch {
-      setError("Unable to reach the analysis service. Check the local server and try again.");
+      setError("Unable to reach the triage service. Check the local server and try again.");
     } finally {
       setLoading(false);
     }
   }
 
-  function selectSample(id: string) {
-    const sample = sampleRequests.find((item) => item.id === id);
-    if (!sample) return;
-    setSelectedSample(id);
-    setRequestText(sample.text);
+  function updateStatus(status: string) {
+    setQueue((current) => current.map((item) => (item.id === selectedId ? { ...item, status } : item)));
   }
 
-  function runSampleEvalPreview() {
-    if (!analysis?.result) return;
-    setBatchEvals(
-      sampleRequests.map((sample) => ({
-        title: sample.label,
-        evalResult: runEvals(sample.text, analysis.result)
-      }))
-    );
+  function displayStatus(item: QueueItem) {
+    return item.id === selectedItem.id ? selectedItem.status : item.status;
   }
-
-  const approvalOwners = analysis?.result.suggested_owners.filter((owner) => ownerAllowList.includes(owner)).slice(0, 3) ?? [];
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,#16324f,transparent_32%),linear-gradient(135deg,#020617,#0f172a_45%,#111827)] text-slate-100">
       <div className="mx-auto max-w-7xl px-5 py-8">
         <header className="rounded-3xl border border-slate-800 bg-slate-950/75 p-6 shadow-2xl shadow-cyan-950/20 backdrop-blur">
-          <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+          <p className="text-sm font-semibold uppercase tracking-[0.3em] text-cyan-300">Kelluu Core AI Architect Prototype</p>
+          <div className="mt-4 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.3em] text-cyan-300">Kelluu Core AI Architect Prototype</p>
-              <h1 className="mt-3 text-4xl font-bold tracking-tight md:text-6xl">AI Request Backbone</h1>
+              <h1 className="text-4xl font-bold tracking-tight md:text-6xl">AI Request Triage</h1>
               <p className="mt-4 max-w-3xl text-lg text-slate-300">
-                A lightweight internal AI workflow backbone that turns messy sales/customer/ops requests into structured,
-                reviewable, auditable work before they interrupt software and operations teams.
+                Turns messy sales/customer requests into structured, reviewable work before they interrupt software and operations teams.
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <InfoPill>Server-side LLM calls</InfoPill>
-              <InfoPill>Zod validation</InfoPill>
-              <InfoPill>Seed eval harness</InfoPill>
-              <InfoPill>Mocked data only</InfoPill>
+              <Pill tone="cyan">Server-side LLM</Pill>
+              <Pill tone="emerald">Human review</Pill>
+              <Pill>Mocked data only</Pill>
+              <Pill tone="amber">Safety checks</Pill>
             </div>
           </div>
         </header>
 
-        <nav className="mt-6 grid gap-2 rounded-2xl border border-slate-800 bg-slate-950/70 p-2 md:grid-cols-5">
-          {tabs.map((tab) => (
+        <nav className="mt-6 grid gap-2 rounded-2xl border border-slate-800 bg-slate-950/70 p-2 md:grid-cols-3">
+          {views.map((view) => (
             <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
+              key={view.id}
+              onClick={() => setActiveView(view.id)}
               className={`rounded-xl px-3 py-3 text-sm font-semibold transition ${
-                activeTab === tab.id ? "bg-cyan-300 text-slate-950" : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                activeView === view.id ? "bg-cyan-300 text-slate-950" : "text-slate-300 hover:bg-slate-800 hover:text-white"
               }`}
             >
-              {tab.label}
+              {view.label}
             </button>
           ))}
         </nav>
 
         <div className="mt-6">
-          {activeTab === "intake" ? (
-            <div className="grid gap-6 lg:grid-cols-[1.35fr_0.65fr]">
-              <SectionCard title="Request Intake" eyebrow="Prototype scope">
+          {activeView === "sales" ? (
+            <div className="grid gap-6 lg:grid-cols-[1fr_0.8fr]">
+              <Card title="Sales Portal" eyebrow="Submit for triage">
                 <p>
-                  Built for Sagar Dubey&apos;s Kelluu Core AI Architect application, this prototype shows how a dual-use
-                  deep-tech team could structure inbound sales, customer, and operations requests before committing software or
-                  delivery resources.
+                  Submit customer or internal requests here. AI will structure the request, identify missing information, and prepare it
+                  for review.
                 </p>
-                <p className="mt-3 rounded-xl border border-amber-400/30 bg-amber-400/10 p-3 text-amber-100">
-                  Mocked data only. No Kelluu confidential data used.
-                </p>
-                <label className="mt-5 block text-sm font-semibold text-slate-200" htmlFor="sample">
-                  Sample request
+                <div className="mt-5">
+                  <label className="block text-sm font-semibold text-slate-200" htmlFor="sample">
+                    Load sample
+                  </label>
+                  <select
+                    id="sample"
+                    value={selectedSampleId}
+                    onChange={(event) => applySample(event.target.value)}
+                    className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-900 p-3 text-slate-100 outline-none ring-cyan-300 focus:ring-2"
+                  >
+                    {sampleRequests.map((sample) => (
+                      <option key={sample.id} value={sample.id}>
+                        {sample.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="mt-5 grid gap-4 md:grid-cols-2">
+                  <TextField
+                    label="Customer / opportunity name"
+                    value={form.customerName}
+                    onChange={(value) => updateForm("customerName", value)}
+                  />
+                  <TextField label="Deadline" value={form.deadline} onChange={(value) => updateForm("deadline", value)} />
+                </div>
+                <label className="mt-4 block">
+                  <span className="text-sm font-semibold text-slate-200">Request summary</span>
+                  <textarea
+                    value={form.requestSummary}
+                    onChange={(event) => updateForm("requestSummary", event.target.value)}
+                    rows={5}
+                    className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-900 p-4 text-slate-100 outline-none ring-cyan-300 focus:ring-2"
+                  />
                 </label>
-                <select
-                  id="sample"
-                  value={selectedSample}
-                  onChange={(event) => selectSample(event.target.value)}
-                  className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-900 p-3 text-slate-100 outline-none ring-cyan-300 focus:ring-2"
-                >
-                  {sampleRequests.map((sample) => (
-                    <option key={sample.id} value={sample.id}>
-                      {sample.label}
-                    </option>
-                  ))}
-                </select>
-                <label className="mt-5 block text-sm font-semibold text-slate-200" htmlFor="request">
-                  Messy internal request
+                <label className="mt-4 block">
+                  <span className="text-sm font-semibold text-slate-200">What do you need from Software/Ops?</span>
+                  <textarea
+                    value={form.softwareNeed}
+                    onChange={(event) => updateForm("softwareNeed", event.target.value)}
+                    rows={4}
+                    className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-900 p-4 text-slate-100 outline-none ring-cyan-300 focus:ring-2"
+                  />
                 </label>
-                <textarea
-                  id="request"
-                  value={requestText}
-                  onChange={(event) => setRequestText(event.target.value)}
-                  rows={9}
-                  className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-900 p-4 text-slate-100 outline-none ring-cyan-300 focus:ring-2"
-                />
+                <div className="mt-4 grid gap-4 md:grid-cols-2">
+                  <label className="block">
+                    <span className="text-sm font-semibold text-slate-200">Customer-facing commitment needed?</span>
+                    <select
+                      value={form.commitmentNeeded}
+                      onChange={(event) => updateForm("commitmentNeeded", event.target.value as CommitmentNeeded)}
+                      className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-900 p-3 text-slate-100 outline-none ring-cyan-300 focus:ring-2"
+                    >
+                      <option>Yes</option>
+                      <option>No</option>
+                    </select>
+                  </label>
+                  <label className="block">
+                    <span className="text-sm font-semibold text-slate-200">Sensitivity</span>
+                    <select
+                      value={form.sensitivity}
+                      onChange={(event) => updateForm("sensitivity", event.target.value as SensitivityInput)}
+                      className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-900 p-3 text-slate-100 outline-none ring-cyan-300 focus:ring-2"
+                    >
+                      <option>Normal</option>
+                      <option>Customer confidential</option>
+                      <option>Defence-sensitive</option>
+                      <option>Unknown</option>
+                    </select>
+                  </label>
+                </div>
                 {error ? <p className="mt-4 rounded-xl border border-rose-400/30 bg-rose-400/10 p-3 text-rose-100">{error}</p> : null}
                 <button
-                  onClick={analyseRequest}
+                  onClick={submitForTriage}
                   disabled={loading}
                   className="mt-5 rounded-xl bg-cyan-300 px-5 py-3 font-bold text-slate-950 shadow-lg shadow-cyan-950/30 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {loading ? "Analysing..." : "Analyse with AI"}
+                  {loading ? "Submitting..." : "Submit for AI triage"}
                 </button>
-              </SectionCard>
-              <SectionCard title="Mock retrieval context" eyebrow="Hardcoded guidance">
-                <ListBlock items={mockedContextSnippets.map((snippet) => `${snippet.title}: ${snippet.body}`)} />
-              </SectionCard>
+              </Card>
+
+              <Card title="Submitted requests" eyebrow="Local queue">
+                <div className="space-y-3">
+                  {queue.map((item) => (
+                    <button
+                      key={item.id}
+                      onClick={() => {
+                        setSelectedId(item.id);
+                        setActiveView("queue");
+                      }}
+                      className="w-full rounded-xl border border-slate-800 bg-slate-900/60 p-4 text-left transition hover:border-cyan-300/50"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="font-semibold text-slate-100">{item.triage.clean_title}</p>
+                          <p className="mt-1 text-xs text-slate-500">{item.customerName}</p>
+                        </div>
+                        <Pill tone={item.triage.sensitivity === "Normal" ? "slate" : "amber"}>{item.triage.sensitivity}</Pill>
+                      </div>
+                      <div className="mt-3 grid gap-2 text-xs text-slate-400 md:grid-cols-4">
+                        <span className="rounded-lg border border-cyan-300/30 bg-cyan-300/10 px-2 py-1 font-semibold text-cyan-100">
+                          Queue status: {displayStatus(item)}
+                        </span>
+                        <span>Deadline: {item.deadline}</span>
+                        <span>Missing info: {item.triage.missing_information.length}</span>
+                        <span>Route: {item.triage.suggested_route}</span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </Card>
             </div>
           ) : null}
 
-          {activeTab === "analysis" ? (
-            analysis ? (
-              <div className="grid gap-6 lg:grid-cols-2">
-                <SectionCard title="Summary" eyebrow="AI analysis">
-                  <p>{analysis.result.summary}</p>
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    <InfoPill>Classification: {analysis.result.classification}</InfoPill>
-                    <InfoPill>Sensitivity: {analysis.result.sensitivity}</InfoPill>
-                    <InfoPill>Confidence: {Math.round(analysis.result.confidence * 100)}%</InfoPill>
-                  </div>
-                </SectionCard>
-                <SectionCard title="Extracted fields">
-                  <KeyValueGrid result={analysis.result} />
-                </SectionCard>
-                <SectionCard title="Missing information">
-                  <ListBlock items={analysis.result.missing_information} />
-                </SectionCard>
-                <SectionCard title="Suggested owners">
-                  <ListBlock items={analysis.result.suggested_owners} />
-                </SectionCard>
-                <SectionCard title="Internal tasks">
-                  <ListBlock items={analysis.result.internal_tasks} />
-                </SectionCard>
-                <SectionCard title="Risk notes">
-                  <ListBlock items={analysis.result.risk_notes} />
-                </SectionCard>
-                <SectionCard title="Draft internal spec">
-                  <p className="whitespace-pre-wrap">{analysis.result.draft_internal_spec}</p>
-                </SectionCard>
-                <SectionCard title="Draft customer response">
-                  <p className="whitespace-pre-wrap">{analysis.result.draft_customer_response}</p>
-                </SectionCard>
-              </div>
-            ) : (
-              <EmptyState message="Run an analysis from Request Intake to populate this page." />
-            )
-          ) : null}
+          {activeView === "queue" ? (
+            <div className="grid gap-6 lg:grid-cols-[0.75fr_1.25fr]">
+              <Card title="Head of Software Queue" eyebrow="Review before interruption">
+                <p>Review structured requests before they interrupt software or operations teams.</p>
+                <div className="mt-5 space-y-3">
+                  {queue.map((item) => (
+                    <button
+                      key={item.id}
+                      onClick={() => setSelectedId(item.id)}
+                      className={`w-full rounded-xl border p-4 text-left transition ${
+                        item.id === selectedItem.id ? "border-cyan-300 bg-cyan-300/10" : "border-slate-800 bg-slate-900/60 hover:border-cyan-300/50"
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <p className="font-semibold text-slate-100">{item.triage.clean_title}</p>
+                        <Pill tone="cyan">Queue status: {displayStatus(item)}</Pill>
+                      </div>
+                      <p className="mt-2 text-xs text-slate-400">Deadline: {item.deadline}</p>
+                    </button>
+                  ))}
+                </div>
+              </Card>
 
-          {activeTab === "approval" ? (
-            analysis ? (
-              <div className="grid gap-6 lg:grid-cols-[0.8fr_1.2fr]">
-                <SectionCard title="Approval gate" eyebrow="Human in the loop">
-                  <p className="text-2xl font-bold text-cyan-200">
-                    Human approval: {analysis.result.recommended_human_approval ? "Required" : "Not required by current output"}
+              <div className="space-y-6">
+                <Card title={selectedItem.triage.clean_title} eyebrow="Selected request detail">
+                  <div className="flex flex-wrap gap-2">
+                    <Pill tone={selectedItem.triage.software_interrupt_allowed ? "emerald" : "rose"}>
+                      Software interrupt allowed: {selectedItem.triage.software_interrupt_allowed ? "true" : "false"}
+                    </Pill>
+                    <Pill tone="cyan">Selected detail status: {selectedItem.status}</Pill>
+                    <Pill>Confidence: {Math.round(selectedItem.triage.confidence * 100)}%</Pill>
+                  </div>
+                  <div className="mt-4 rounded-xl border border-cyan-300/30 bg-cyan-300/10 p-3 text-sm font-semibold text-cyan-100">
+                    Selected detail status: {selectedItem.status}
+                  </div>
+                  <div className="mt-5 grid gap-3 md:grid-cols-2">
+                    <Metric label="Request type" value={selectedItem.triage.request_type} />
+                    <Metric label="Urgency" value={selectedItem.triage.urgency} />
+                    <Metric label="Business value" value={selectedItem.triage.business_value} />
+                    <Metric label="Technical complexity" value={selectedItem.triage.technical_complexity} />
+                    <Metric label="Sensitivity" value={selectedItem.triage.sensitivity} />
+                    <Metric label="Suggested route" value={selectedItem.triage.suggested_route} />
+                    <Metric label="Suggested next action" value={selectedItem.triage.suggested_next_action} />
+                    <Metric label="Recommended status" value={selectedItem.triage.recommended_status} />
+                  </div>
+                  <div className="mt-5">
+                    <p className="font-semibold text-slate-200">Summary</p>
+                    <p className="mt-2 rounded-xl border border-slate-800 bg-slate-900/70 p-3">{selectedItem.triage.summary}</p>
+                  </div>
+                  <div className="mt-5">
+                    <p className="font-semibold text-slate-200">Original request</p>
+                    <p className="mt-2 whitespace-pre-wrap rounded-xl border border-slate-800 bg-slate-900/70 p-3">{selectedItem.originalRequest}</p>
+                  </div>
+                </Card>
+
+                <div className="grid gap-6 lg:grid-cols-2">
+                  <Card title="Missing information">
+                    <ListBlock items={selectedItem.triage.missing_information} />
+                  </Card>
+                  <Card title="Risk flags">
+                    <ListBlock items={selectedItem.triage.risk_flags} />
+                  </Card>
+                </div>
+
+                <Card title="Draft clarification message to Sales">
+                  <p className="whitespace-pre-wrap rounded-xl border border-slate-800 bg-slate-900/70 p-3">
+                    {selectedItem.triage.draft_clarification_to_sales}
                   </p>
-                  <div className="mt-4">
-                    <p className="font-semibold text-slate-200">Suggested approval owners</p>
-                    <div className="mt-2">
-                      <ListBlock items={approvalOwners.length ? approvalOwners : analysis.result.suggested_owners} />
-                    </div>
-                  </div>
-                  <div className="mt-4 space-y-2 text-slate-300">
-                    <p>No external action taken</p>
-                    <p>Mock data only</p>
-                    <p>Human approval required before customer-facing commitments</p>
-                    <p>Secrets and production systems are not accessible</p>
-                    <p>This prototype does not connect to CRM, ERP, ticketing, repos, or internal docs</p>
-                  </div>
-                </SectionCard>
-                <SectionCard title="Audit trail">
-                  <div className="mb-4 grid gap-2 md:grid-cols-2">
-                    <InfoPill>Model: {analysis.model}</InfoPill>
-                    <InfoPill>Timestamp: {new Date(analysis.timestamp).toLocaleString()}</InfoPill>
-                  </div>
-                  <ListBlock
-                    items={[
-                      "Request received",
-                      "Mock context attached",
-                      "LLM analysis generated",
-                      "Schema validation completed",
-                      "Eval checks completed",
-                      "Human approval pending",
-                      ...analysis.result.audit_notes
-                    ]}
-                  />
-                </SectionCard>
-              </div>
-            ) : (
-              <EmptyState message="Run an analysis to view approval and audit state." />
-            )
-          ) : null}
+                </Card>
 
-          {activeTab === "evals" ? (
-            <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
-              <SectionCard title="Eval Suite" eyebrow="Quality gates">
-                <p>
-                  This is a seed eval harness, not proof of full safety. It checks structure, safety, missing information,
-                  approval behavior, owner routing, and unsupported commitments before work is treated as reviewable.
-                </p>
-                <button
-                  onClick={() => analysis && setAnalysis({ ...analysis, evalResult: runEvals(requestText, analysis.result) })}
-                  disabled={!analysis}
-                  className="mt-5 rounded-xl bg-cyan-300 px-4 py-2 font-bold text-slate-950 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  Run evals against current AI output
-                </button>
-                <button
-                  onClick={runSampleEvalPreview}
-                  disabled={!analysis}
-                  className="ml-0 mt-3 rounded-xl border border-slate-700 px-4 py-2 font-bold text-slate-200 disabled:cursor-not-allowed disabled:opacity-50 md:ml-3"
-                >
-                  Preview current output against all sample cases
-                </button>
-              </SectionCard>
-              {currentEval ? (
-                <SectionCard title={`Current score: ${currentEval.score}%`}>
+                <Card title={`Safety checks: ${selectedItem.evalResult.score}%`} eyebrow="Local checks">
+                  <p className="mb-4 text-slate-400">{selectedItem.evalResult.disclaimer}</p>
                   <div className="space-y-3">
-                    {currentEval.checks.map((check) => (
+                    {selectedItem.evalResult.checks.map((check) => (
                       <div key={check.id} className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
                         <div className="flex items-start justify-between gap-3">
                           <div>
                             <p className="font-semibold text-slate-100">{check.label}</p>
                             <p className="mt-1 text-slate-400">{check.explanation}</p>
                           </div>
-                          <EvalBadge status={check.status} />
+                          <CheckBadge status={check.status} />
                         </div>
                       </div>
                     ))}
                   </div>
-                </SectionCard>
-              ) : (
-                <EmptyState message="Run an analysis before evaluating model output." />
-              )}
-              {batchEvals.length ? (
-                <SectionCard title="Sample-case preview">
-                  <div className="grid gap-3 md:grid-cols-2">
-                    {batchEvals.map((item) => (
-                      <div key={item.title} className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
-                        <p className="font-semibold text-slate-100">{item.title}</p>
-                        <p className="mt-2 text-2xl font-bold text-cyan-200">{item.evalResult.score}%</p>
-                      </div>
+                </Card>
+
+                <Card title="Audit trail">
+                  <div className="mb-4 flex flex-wrap gap-2">
+                    <Pill>Model: {selectedItem.model}</Pill>
+                    <Pill>Timestamp: {new Date(selectedItem.timestamp).toLocaleString()}</Pill>
+                  </div>
+                  <ListBlock
+                    items={[
+                      "Request submitted by Sales Portal",
+                      "Mock context attached",
+                      "LLM triage generated",
+                      "Zod schema validation completed",
+                      "Local safety checks completed",
+                      "Head of Software review pending",
+                      ...selectedItem.triage.audit_notes,
+                    ]}
+                  />
+                </Card>
+
+                <Card title="Reviewer actions">
+                  <div className="grid gap-3 md:grid-cols-3">
+                    {[
+                      "Ask Sales for clarification",
+                      "Route to Software",
+                      "Route to Ops",
+                      "Route to Security",
+                      "Approve discovery",
+                      "Reject / not now",
+                    ].map((action) => (
+                      <button
+                        key={action}
+                        onClick={() => updateStatus(action)}
+                        className="rounded-xl border border-slate-700 px-4 py-3 font-semibold text-slate-100 transition hover:border-cyan-300 hover:bg-cyan-300/10"
+                      >
+                        {action}
+                      </button>
                     ))}
                   </div>
-                </SectionCard>
-              ) : null}
+                </Card>
+              </div>
             </div>
           ) : null}
 
-          {activeTab === "architecture" ? (
-            <div className="grid gap-6 lg:grid-cols-2">
-              <SectionCard title="Current prototype architecture" eyebrow="Implemented">
-                <ListBlock
-                  items={[
-                    "User",
-                    "Next.js frontend",
-                    "/api/analyse",
-                    "Server-side prompt builder",
-                    "Mocked retrieval context",
-                    "Live LLM API",
-                    "Structured JSON parser",
-                    "Zod schema validation",
-                    "Rule-based eval runner",
-                    "UI rendering",
-                    "Human approval/audit trail"
-                  ]}
-                />
-              </SectionCard>
-              <SectionCard title="Future production architecture" eyebrow="Not implemented">
-                <ListBlock
-                  items={[
-                    "SSO/RBAC",
-                    "Audit database",
-                    "Approved model gateway",
-                    "On-prem/private model option",
-                    "CRM/ERP/ticketing integrations",
-                    "Internal documentation retrieval",
-                    "Repo/CI/CD integrations",
-                    "Secrets manager",
-                    "Monitoring for cost/latency/failure rate",
-                    "Human review workflow",
-                    "Golden eval dataset",
-                    "Security review"
-                  ]}
-                />
-              </SectionCard>
-              <SectionCard title="Design stance">
+          {activeView === "works" ? (
+            <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
+              <Card title="How it Works" eyebrow="Workflow">
+                <ol className="space-y-3">
+                  {[
+                    "Sales submits request",
+                    "AI structures it",
+                    "AI flags missing info, sensitivity, and routing",
+                    "Head of Software reviews clean queue",
+                    "Reviewer routes, rejects, approves discovery, or asks for clarification",
+                    "Sales sees updated status",
+                  ].map((step, index) => (
+                    <li key={step} className="rounded-xl border border-slate-800 bg-slate-900/70 p-4">
+                      <span className="mr-3 rounded-full bg-cyan-300 px-2 py-1 text-xs font-bold text-slate-950">{index + 1}</span>
+                      {step}
+                    </li>
+                  ))}
+                </ol>
+              </Card>
+              <Card title="Prototype boundary" eyebrow="Safety">
                 <p>
-                  The prototype treats the AI as a structuring layer, not an autonomous actor. It does not email customers,
-                  change systems, access production data, or claim feasibility. It prepares reviewable work for approved owners.
+                  This prototype uses a live server-side LLM call, mocked context, Zod validation, local safety checks, and no real Kelluu
+                  data.
                 </p>
-                <p className="mt-3">
-                  AI-assisted development could become a future extension through repo, CI/CD, and security-scanner integrations,
-                  but it is not part of this product prototype.
-                </p>
-              </SectionCard>
-              <SectionCard title="Security boundary">
-                <p>
-                  The browser only calls the app&apos;s own API route. The OpenAI API key is read from server-side environment
-                  variables and is never placed in frontend code or a NEXT_PUBLIC variable.
-                </p>
-              </SectionCard>
+                <div className="mt-5 grid gap-3 md:grid-cols-2">
+                  <Metric label="LLM calls" value="Server-side only through /api/analyse" />
+                  <Metric label="Data" value="Mocked, no confidential Kelluu data" />
+                  <Metric label="Safety" value="Local checks shown in Head of Software Queue" />
+                  <Metric label="Actions" value="Local status updates only" />
+                </div>
+              </Card>
             </div>
           ) : null}
         </div>
@@ -418,10 +581,11 @@ export default function Home() {
   );
 }
 
-function EmptyState({ message }: { message: string }) {
+function Metric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-dashed border-slate-700 bg-slate-950/60 p-8 text-center text-slate-400">
-      {message}
+    <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-3">
+      <p className="text-xs uppercase tracking-[0.18em] text-slate-500">{label}</p>
+      <p className="mt-1 text-slate-200">{value}</p>
     </div>
   );
 }

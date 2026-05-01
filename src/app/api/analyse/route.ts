@@ -2,34 +2,31 @@ import OpenAI from "openai";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { mockedContextSnippets } from "@/lib/context";
-import { runEvals } from "@/lib/evals";
-import { analysisSchema } from "@/lib/schema";
+import { runSafetyChecks } from "@/lib/evals";
+import { triageSchema } from "@/lib/schema";
 
 const requestSchema = z.object({
   requestText: z.string().trim().min(8, "Request text is required").max(8000),
 });
 
-const SYSTEM_PROMPT = `You are an internal AI workflow analyst for a dual-use deep-tech company. Your job is to turn messy internal requests into structured, auditable work. Do not invent facts. Do not promise feasibility. Flag missing information. Identify sensitive/defence/customer data. Keep humans in the loop. Prefer structured workflow suggestions over autonomous action. Output valid JSON only using the requested schema. The system is for internal triage, not final customer commitments. Use the provided mocked context snippets as guidance, but do not claim they are real company policies.`;
+const SYSTEM_PROMPT = `You are an internal AI request triage assistant for a dual-use deep-tech company. Your job is to protect software and operations teams from vague requests while helping Sales get useful answers faster. Turn messy customer/internal requests into structured, reviewable work. Do not promise feasibility. Do not allow direct software interruption unless the request is clear, urgent, and sufficiently specified. Flag missing information. Flag defence/customer-sensitive topics. Prefer asking for clarification before routing vague work to Software. Output valid JSON only.`;
 
 const JSON_SHAPE = `{
+  "clean_title": string,
   "summary": string,
-  "classification": string,
-  "sensitivity": string,
-  "extracted_fields": {
-    "customer_type": string,
-    "use_case": string,
-    "urgency": string,
-    "deadline": string,
-    "requested_output": string
-  },
+  "request_type": string,
+  "urgency": "Low" | "Medium" | "High" | "Unknown",
+  "business_value": "Low" | "Medium" | "High" | "Unknown",
+  "technical_complexity": "Low" | "Medium" | "High" | "Unknown",
+  "sensitivity": "Normal" | "Customer confidential" | "Defence-sensitive" | "Unknown",
   "missing_information": string[],
-  "suggested_owners": string[],
-  "internal_tasks": string[],
-  "draft_internal_spec": string,
-  "draft_customer_response": string,
-  "risk_notes": string[],
+  "suggested_route": string,
+  "suggested_next_action": string,
+  "software_interrupt_allowed": boolean,
+  "draft_clarification_to_sales": string,
+  "risk_flags": string[],
+  "recommended_status": string,
   "audit_notes": string[],
-  "recommended_human_approval": boolean,
   "confidence": number
 }`;
 
@@ -38,14 +35,16 @@ function buildUserPrompt(requestText: string) {
     .map((item) => `MOCKED CONTEXT - ${item.title}: ${item.body}`)
     .join("\n");
 
-  return `Analyse this internal request for triage. Use only the request and mocked context. Mention relevant mocked context titles in audit_notes.
+  return `Triage this Sales/customer/internal request for Head of Software review.
+
+Use only the submitted request and mocked context. Mention relevant mocked context titles in audit_notes. Do not claim the mocked context is a real company policy.
 
 Requested JSON schema:
 ${JSON_SHAPE}
 
 ${context}
 
-Request:
+Submitted request:
 ${requestText}`;
 }
 
@@ -72,7 +71,7 @@ export async function POST(request: Request) {
 
     if (!parsedRequest.success) {
       return NextResponse.json(
-        { error: "Enter a request with enough detail to analyse." },
+        { error: "Enter a request with enough detail to triage." },
         { status: 400 },
       );
     }
@@ -102,8 +101,8 @@ export async function POST(request: Request) {
     }
 
     const rawJson = JSON.parse(extractJson(content));
-    const result = analysisSchema.parse(rawJson);
-    const evalResult = runEvals(parsedRequest.data.requestText, result);
+    const result = triageSchema.parse(rawJson);
+    const evalResult = runSafetyChecks(parsedRequest.data.requestText, result);
 
     return NextResponse.json({
       result,
@@ -119,7 +118,7 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json(
-      { error: "Analysis failed safely. Check the server logs and try again." },
+      { error: "Triage failed safely. Check the server logs and try again." },
       { status: 500 },
     );
   }

@@ -32,7 +32,7 @@ describe("POST /api/analyse", () => {
       new Request("http://localhost/api/analyse", {
         method: "POST",
         body: JSON.stringify({
-          requestText: "A defence customer needs a cautious internal triage response before any customer commitment.",
+          requestText: "A defence customer needs cautious request triage before any customer commitment.",
         }),
       }),
     );
@@ -41,50 +41,46 @@ describe("POST /api/analyse", () => {
     await expect(response.json()).resolves.toEqual({
       error: "Missing server-side API key. Add OPENAI_API_KEY to .env.local.",
     });
-
     expect(openAiConstructor).not.toHaveBeenCalled();
   });
 
-  it("validates model JSON and returns eval results for the server-side LLM flow", async () => {
+  it("validates model JSON and returns safety checks for the server-side LLM flow", async () => {
     process.env.OPENAI_API_KEY = "test-server-key";
     process.env.AI_MODEL = "test-model";
     openAiConstructor.mockImplementation(function OpenAI() {
       return {
-      chat: {
-        completions: {
-          create: vi.fn().mockResolvedValue({
-            choices: [
-              {
-                message: {
-                  content: JSON.stringify({
-                    summary: "Defence RFI needs structured triage before any feasibility statement.",
-                    classification: "Customer RFI triage",
-                    sensitivity: "high",
-                    extracted_fields: {
-                      customer_type: "Defence customer",
-                      use_case: "Persistent border monitoring",
+        chat: {
+          completions: {
+            create: vi.fn().mockResolvedValue({
+              choices: [
+                {
+                  message: {
+                    content: JSON.stringify({
+                      clean_title: "Defence border monitoring RFI needs clarification",
+                      summary: "Sales needs a structured response for a defence monitoring request before feasibility is discussed.",
+                      request_type: "Customer RFI",
                       urgency: "High",
-                      deadline: "Friday",
-                      requested_output: "Preliminary technical answer",
-                    },
-                    missing_information: ["AOI/location", "Cadence/frequency", "Latency requirement", "Delivery format"],
-                    suggested_owners: ["Sales", "Operations", "Security"],
-                    internal_tasks: ["Clarify AOI", "Collect cadence and latency requirements"],
-                    draft_internal_spec: "Prepare a feasibility review package after clarifying AOI, cadence, latency, and delivery format.",
-                    draft_customer_response:
-                      "We are reviewing the monitoring request and need additional operational details before confirming feasibility or schedule.",
-                    risk_notes: ["Defence-sensitive and customer-facing; avoid capability commitments before review."],
-                    audit_notes: ["Referenced MOCKED Defence-Sensitive Data Handling Policy."],
-                    recommended_human_approval: true,
-                    confidence: 0.82,
-                  }),
+                      business_value: "High",
+                      technical_complexity: "High",
+                      sensitivity: "Defence-sensitive",
+                      missing_information: ["AOI/location", "Cadence/frequency", "Latency requirement", "Delivery format"],
+                      suggested_route: "Sales + Security + Operations discovery review before Software",
+                      suggested_next_action: "Ask Sales to collect missing feasibility inputs and assign Security review.",
+                      software_interrupt_allowed: false,
+                      draft_clarification_to_sales:
+                        "Please confirm AOI, monitoring cadence, latency expectations, delivery format, and decision owner before Software review.",
+                      risk_flags: ["Defence-sensitive customer-facing request", "Feasibility must not be promised"],
+                      recommended_status: "Needs Sales clarification",
+                      audit_notes: ["Referenced MOCKED Defence-Sensitive Data Handling Policy."],
+                      confidence: 0.84,
+                    }),
+                  },
                 },
-              },
-            ],
-          }),
+              ],
+            }),
+          },
         },
-      },
-    };
+      };
     });
 
     const response = await POST(
@@ -92,7 +88,7 @@ describe("POST /api/analyse", () => {
         method: "POST",
         body: JSON.stringify({
           requestText:
-            "A defence customer wants to know whether we can support persistent monitoring for a remote border corridor.",
+            "Customer/opportunity: Border programme. Request summary: A defence customer wants to know whether we can support persistent monitoring for a remote border corridor. Deadline: Friday. Need from Software/Ops: feasibility input. Customer-facing commitment needed: yes. Sensitivity: Defence-sensitive.",
         }),
       }),
     );
@@ -100,8 +96,9 @@ describe("POST /api/analyse", () => {
     expect(response.status).toBe(200);
     const payload = await response.json();
     expect(payload.model).toBe("test-model");
-    expect(payload.result.recommended_human_approval).toBe(true);
-    expect(payload.evalResult.score).toBeGreaterThanOrEqual(80);
+    expect(payload.result.software_interrupt_allowed).toBe(false);
+    expect(payload.result.sensitivity).toBe("Defence-sensitive");
+    expect(payload.evalResult.score).toBe(100);
     expect(JSON.stringify(payload)).not.toContain("test-server-key");
   });
 });
