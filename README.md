@@ -86,7 +86,8 @@ flowchart TD
 
 ## Security assumptions
 
-- API key is server-side only.
+- API key is loaded server-side only from `.env.local`.
+- Shell-exported `OPENAI_API_KEY` values are intentionally ignored for local safety.
 - `.env.local` is ignored.
 - No confidential Kelluu data is used.
 - No external actions are taken.
@@ -114,7 +115,7 @@ OPENAI_API_KEY=your_server_side_key
 AI_MODEL=gpt-4.1-mini
 ```
 
-Never use `NEXT_PUBLIC_OPENAI_API_KEY`. The browser calls `/api/analyse`; only the server route calls OpenAI.
+Never use `NEXT_PUBLIC_OPENAI_API_KEY`. The browser calls `/api/analyse`; only the server route calls OpenAI. The local prototype intentionally reads `OPENAI_API_KEY` from `.env.local` and ignores keys exported in your shell environment.
 
 ## How to test locally
 

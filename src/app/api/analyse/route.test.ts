@@ -1,4 +1,6 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { existsSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { POST } from "./route";
 
 const openAiConstructor = vi.hoisted(() => vi.fn());
@@ -10,9 +12,24 @@ vi.mock("openai", () => ({
 describe("POST /api/analyse", () => {
   const originalKey = process.env.OPENAI_API_KEY;
   const originalModel = process.env.AI_MODEL;
+  const envLocalPath = join(process.cwd(), ".env.local");
+  const originalEnvLocal = existsSync(envLocalPath) ? readFileSync(envLocalPath, "utf8") : null;
+
+  beforeEach(() => {
+    if (existsSync(envLocalPath)) {
+      unlinkSync(envLocalPath);
+    }
+  });
 
   afterEach(() => {
     openAiConstructor.mockReset();
+    if (originalEnvLocal === null) {
+      if (existsSync(envLocalPath)) {
+        unlinkSync(envLocalPath);
+      }
+    } else {
+      writeFileSync(envLocalPath, originalEnvLocal);
+    }
     if (originalKey) {
       process.env.OPENAI_API_KEY = originalKey;
     } else {
@@ -25,8 +42,8 @@ describe("POST /api/analyse", () => {
     }
   });
 
-  it("returns a safe missing-key error without calling OpenAI", async () => {
-    delete process.env.OPENAI_API_KEY;
+  it("ignores shell OPENAI_API_KEY and requires .env.local", async () => {
+    process.env.OPENAI_API_KEY = "shell-key-should-not-be-used";
 
     const response = await POST(
       new Request("http://localhost/api/analyse", {
@@ -40,14 +57,15 @@ describe("POST /api/analyse", () => {
     expect(response.status).toBe(500);
     await expect(response.json()).resolves.toEqual({
       error:
-        "OpenAI API key is missing. Create .env.local from .env.example, add OPENAI_API_KEY, then restart npm run dev.",
+        "OpenAI API key is missing from .env.local. This prototype intentionally ignores shell environment keys. Create .env.local from .env.example, add OPENAI_API_KEY, then restart npm run dev.",
     });
     expect(openAiConstructor).not.toHaveBeenCalled();
   });
 
   it("validates model JSON and returns safety checks for the server-side LLM flow", async () => {
-    process.env.OPENAI_API_KEY = "test-server-key";
+    process.env.OPENAI_API_KEY = "shell-key-should-not-be-used";
     process.env.AI_MODEL = "test-model";
+    writeFileSync(envLocalPath, "OPENAI_API_KEY=test-local-file-key\nAI_MODEL=gpt-4.1-mini\n");
     openAiConstructor.mockImplementation(function OpenAI() {
       return {
         chat: {
@@ -100,6 +118,7 @@ describe("POST /api/analyse", () => {
     expect(payload.result.software_interrupt_allowed).toBe(false);
     expect(payload.result.sensitivity).toBe("Defence-sensitive");
     expect(payload.safetyResult.score).toBe(100);
-    expect(JSON.stringify(payload)).not.toContain("test-server-key");
+    expect(JSON.stringify(payload)).not.toContain("test-local-file-key");
+    expect(openAiConstructor).toHaveBeenCalledWith({ apiKey: "test-local-file-key" });
   });
 });

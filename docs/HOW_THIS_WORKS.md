@@ -12,7 +12,7 @@ Sales Portal | Head of Software Queue | How it Works
 
 1. Sales submits a customer or internal request in plain language.
 2. The frontend sends the request brief to the server-only `/api/analyse` route.
-3. The server adds mocked context snippets and calls the configured LLM with `OPENAI_API_KEY` from server-side environment variables.
+3. The server reads `OPENAI_API_KEY` directly from `.env.local`, ignores shell-exported keys, adds mocked context snippets, and calls the configured LLM.
 4. The model returns structured triage JSON.
 5. Zod validates the response shape.
 6. Local safety checks flag missing information, sensitivity, unsupported commitments, owner routing, and software-interrupt risk.

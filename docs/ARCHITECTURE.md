@@ -82,7 +82,7 @@ OPENAI_API_KEY=your_server_side_key
 AI_MODEL=gpt-4.1-mini
 ```
 
-Do not create `NEXT_PUBLIC_OPENAI_API_KEY`. The API key must stay server-side.
+Do not create `NEXT_PUBLIC_OPENAI_API_KEY`. The API key must stay server-side. For local development, the API route intentionally reads `OPENAI_API_KEY` from `.env.local` only and ignores shell-exported keys, so accidental terminal environment secrets are not used.
 
 ## Testing
 

@@ -1,13 +1,20 @@
 import OpenAI from "openai";
 import { NextResponse } from "next/server";
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import { z } from "zod";
 import { mockedContextSnippets } from "@/lib/context";
 import { runSafetyChecks } from "@/lib/evals";
 import { triageSchema } from "@/lib/schema";
 
+export const runtime = "nodejs";
+
 const requestSchema = z.object({
   requestText: z.string().trim().min(8, "Request text is required").max(8000),
 });
+
+const missingLocalKeyError =
+  "OpenAI API key is missing from .env.local. This prototype intentionally ignores shell environment keys. Create .env.local from .env.example, add OPENAI_API_KEY, then restart npm run dev.";
 
 const SYSTEM_PROMPT = `You are an internal AI request triage assistant for a dual-use deep-tech company. Your job is to protect software and operations teams from vague requests while helping Sales get useful answers faster. Turn messy customer/internal requests into structured, reviewable work. Do not promise feasibility. Do not allow direct software interruption unless the request is clear, urgent, and sufficiently specified. Flag missing information. Flag defence/customer-sensitive topics. Prefer asking for clarification before routing vague work to Software. Output valid JSON only.`;
 
@@ -61,6 +68,18 @@ function extractJson(content: string) {
   return match[0];
 }
 
+function readLocalOpenAiKey() {
+  const envPath = join(process.cwd(), ".env.local");
+  if (!existsSync(envPath)) {
+    return "";
+  }
+
+  const envFile = readFileSync(envPath, "utf8");
+  const match = envFile.match(/^OPENAI_API_KEY=(.*)$/m);
+  const rawValue = match?.[1]?.trim() ?? "";
+  return rawValue.replace(/^['"]|['"]$/g, "");
+}
+
 export async function POST(request: Request) {
   const model = process.env.AI_MODEL || "gpt-4.1-mini";
   const timestamp = new Date().toISOString();
@@ -76,17 +95,15 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!process.env.OPENAI_API_KEY) {
+    const openAiApiKey = readLocalOpenAiKey();
+    if (!openAiApiKey) {
       return NextResponse.json(
-        {
-          error:
-            "OpenAI API key is missing. Create .env.local from .env.example, add OPENAI_API_KEY, then restart npm run dev.",
-        },
+        { error: missingLocalKeyError },
         { status: 500 },
       );
     }
 
-    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    const openai = new OpenAI({ apiKey: openAiApiKey });
 
     const completion = await openai.chat.completions.create({
       model,
