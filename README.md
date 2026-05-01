@@ -47,7 +47,7 @@ Fast-growing dual-use deep-tech companies can lose engineering focus when vague 
 
 ## Architecture
 
-See `docs/ARCHITECTURE.md` for the runtime flow, security boundary, on-prem/private model note, local runbook, and advisory notes.
+See `docs/ARCHITECTURE.md` for the runtime flow, security boundary, on-prem/private model note, local runbook, and advisory notes. See `docs/HOW_THIS_WORKS.md` for the role-based workflow explanation.
 
 ```mermaid
 flowchart TD

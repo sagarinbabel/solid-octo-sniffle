@@ -262,8 +262,7 @@ export default function Home() {
     <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,#16324f,transparent_32%),linear-gradient(135deg,#020617,#0f172a_45%,#111827)] text-slate-100">
       <div className="mx-auto max-w-7xl px-5 py-8">
         <header className="rounded-3xl border border-slate-800 bg-slate-950/75 p-6 shadow-2xl shadow-cyan-950/20 backdrop-blur">
-          <p className="text-sm font-semibold uppercase tracking-[0.3em] text-cyan-300">Kelluu Core AI Architect Prototype</p>
-          <div className="mt-4 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <h1 className="text-4xl font-bold tracking-tight md:text-6xl">AI Request Triage</h1>
               <p className="mt-4 max-w-3xl text-lg text-slate-300">
