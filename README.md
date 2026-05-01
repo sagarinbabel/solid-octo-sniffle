@@ -51,37 +51,37 @@ See `docs/ARCHITECTURE.md` for the runtime flow, security boundary, on-prem/priv
 
 ```mermaid
 flowchart TD
-    A[Sales / Customer-Facing User] --> B[Sales Portal]
-    B --> C[/api/analyse - Server Only]
-    C --> D[Prompt Builder]
-    D --> E[Mock Retrieval Context]
-    D --> F[Live LLM API]
-    F --> G[Structured JSON Parser]
-    G --> H[Zod Schema Validation]
-    H --> I[Local Safety Check Runner]
-    I --> J[Head of Software Queue]
-    J --> K[Route / Reject / Approve Discovery / Ask Clarification]
-    K --> L[Local Status Update + Audit Trail]
+    A["Sales / Customer-Facing User"] --> B["Sales Portal"]
+    B --> C["/api/analyse - Server Only"]
+    C --> D["Prompt Builder"]
+    D --> E["Mock Retrieval Context"]
+    D --> F["Live LLM API"]
+    F --> G["Structured JSON Parser"]
+    G --> H["Zod Schema Validation"]
+    H --> I["Local Safety Check Runner"]
+    I --> J["Head of Software Queue"]
+    J --> K["Route / Reject / Approve Discovery / Ask Clarification"]
+    K --> L["Local Status Update + Audit Trail"]
 
-    subgraph Future Production Hardening - Not Implemented
-        M[SSO / RBAC]
-        N[Audit Database]
-        O[On-Prem Model Gateway]
-        P[CRM / ERP / Ticketing]
-        Q[Internal Docs Retrieval]
-        R[CI/CD and Security Scanners]
-        S[Secrets Manager]
-        T[Monitoring: Cost / Latency / Failure Rate]
+    subgraph future["Future Production Hardening - Not Implemented"]
+        M["SSO / RBAC"]
+        N["Audit Database"]
+        O["On-Prem Model Gateway"]
+        P["CRM / ERP / Ticketing"]
+        Q["Internal Docs Retrieval"]
+        R["CI/CD and Security Scanners"]
+        S["Secrets Manager"]
+        T["Monitoring: Cost / Latency / Failure Rate"]
     end
 
-    C -. future .-> M
-    L -. future .-> N
-    F -. future .-> O
-    C -. future .-> P
-    D -. future .-> Q
-    C -. future .-> R
-    C -. future .-> S
-    I -. future .-> T
+    C -.-> M
+    L -.-> N
+    F -.-> O
+    C -.-> P
+    D -.-> Q
+    C -.-> R
+    C -.-> S
+    I -.-> T
 ```
 
 ## Security assumptions

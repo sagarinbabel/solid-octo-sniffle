@@ -18,37 +18,37 @@ Pauli described a need for a backbone; this prototype translates that into a con
 
 ```mermaid
 flowchart TD
-    A[Sales / Customer-facing user] --> B[Sales Portal]
-    B --> C[/api/analyse - Server Only]
-    C --> D[Prompt Builder]
-    D --> E[MOCKED Context Snippets]
-    D --> F[Live LLM API]
-    F --> G[Structured JSON Parser]
-    G --> H[Zod Schema Validation]
-    H --> I[Local Safety Checks]
-    I --> J[Head of Software Queue]
-    J --> K[Route / Reject / Approve Discovery / Ask Clarification]
-    K --> L[Local Status Update and Audit Trail]
+    A["Sales / Customer-facing user"] --> B["Sales Portal"]
+    B --> C["/api/analyse - server only"]
+    C --> D["Prompt Builder"]
+    D --> E["MOCKED Context Snippets"]
+    D --> F["Live LLM API"]
+    F --> G["Structured JSON Parser"]
+    G --> H["Zod Schema Validation"]
+    H --> I["Local Safety Checks"]
+    I --> J["Head of Software Queue"]
+    J --> K["Route / Reject / Approve Discovery / Ask Clarification"]
+    K --> L["Local Status Update and Audit Trail"]
 
-    subgraph Future Production Hardening - Not Implemented
-        M[SSO / RBAC]
-        N[Audit Database]
-        O[Internal Model Gateway]
-        P[On-Prem / Private Model]
-        Q[CRM / ERP / Ticketing]
-        R[Internal Docs Retrieval]
-        S[Secrets Manager]
-        T[Monitoring: Cost / Latency / Failure Rate]
+    subgraph FutureHardening["Future Production Hardening - Not Implemented"]
+        M["SSO / RBAC"]
+        N["Audit Database"]
+        O["Internal Model Gateway"]
+        P["On-Prem / Private Model"]
+        Q["CRM / ERP / Ticketing"]
+        R["Internal Docs Retrieval"]
+        S["Secrets Manager"]
+        T["Monitoring: Cost / Latency / Failure Rate"]
     end
 
-    C -. future .-> M
-    L -. future .-> N
-    F -. future .-> O
-    O -. future .-> P
-    C -. future .-> Q
-    D -. future .-> R
-    C -. future .-> S
-    I -. future .-> T
+    C -.-> M
+    L -.-> N
+    F -.-> O
+    O -.-> P
+    C -.-> Q
+    D -.-> R
+    C -.-> S
+    I -.-> T
 ```
 
 ## Runtime flow
