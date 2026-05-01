@@ -30,6 +30,15 @@ type QueueItem = {
   timestamp: string;
 };
 
+type AnalysePayload = {
+  result?: TriageResult;
+  safetyResult?: EvalResult;
+  evalResult?: EvalResult;
+  model?: string;
+  timestamp?: string;
+  error?: string;
+};
+
 const views: { id: View; label: string }[] = [
   { id: "sales", label: "Sales Portal" },
   { id: "queue", label: "Head of Software Queue" },
@@ -107,6 +116,19 @@ const seededQueueItem: QueueItem = {
   },
 };
 
+const unavailableSafetyResult: EvalResult = {
+  score: 0,
+  disclaimer: "Safety checks were not available for this response. Re-run triage after refreshing the app.",
+  checks: [
+    {
+      id: "missing-safety-checks",
+      label: "Safety checks unavailable",
+      status: "warning",
+      explanation: "The AI response did not include local safety-check output, so this request should stay in human review.",
+    },
+  ],
+};
+
 function Pill({ children, tone = "slate" }: { children: React.ReactNode; tone?: "slate" | "cyan" | "amber" | "rose" | "emerald" }) {
   const styles = {
     slate: "border-slate-700 bg-slate-900 text-slate-300",
@@ -172,6 +194,17 @@ function CheckBadge({ status }: { status: EvalCheck["status"] }) {
   return <Pill tone={tone}>{status.toUpperCase()}</Pill>;
 }
 
+function resolveSafetyResult(payload: unknown): EvalResult | null {
+  if (!payload || typeof payload !== "object") return null;
+  const candidate = (payload as { safetyResult?: unknown; evalResult?: unknown }).safetyResult ?? (payload as { evalResult?: unknown }).evalResult;
+  if (!candidate || typeof candidate !== "object") return null;
+  const value = candidate as Partial<EvalResult>;
+  if (typeof value.score !== "number" || !Array.isArray(value.checks) || typeof value.disclaimer !== "string") {
+    return null;
+  }
+  return value as EvalResult;
+}
+
 function buildRequestText(form: SalesForm) {
   return [
     `Customer / opportunity name: ${form.customerName || "Unknown"}`,
@@ -222,13 +255,14 @@ export default function Home() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ requestText: originalRequest }),
       });
-      const payload = await response.json();
+      const payload = (await response.json()) as AnalysePayload;
       if (!response.ok) {
         setError(payload.error || "AI triage failed. Check your API key and try again.");
         return;
       }
-      if (!payload.result || !payload.safetyResult) {
-        setError("AI triage returned an incomplete response. Check the server logs and try again.");
+      const safetyResult = resolveSafetyResult(payload);
+      if (!payload.result) {
+        setError("AI triage returned an incomplete response. Refresh the app and try again.");
         return;
       }
 
@@ -240,9 +274,9 @@ export default function Home() {
         status: payload.result.recommended_status,
         submittedAt: new Date().toLocaleString(),
         triage: payload.result,
-        evalResult: payload.safetyResult,
-        model: payload.model,
-        timestamp: payload.timestamp,
+        evalResult: safetyResult ?? unavailableSafetyResult,
+        model: payload.model ?? "unknown-model",
+        timestamp: payload.timestamp ?? new Date().toISOString(),
       };
       setQueue((current) => [nextItem, ...current]);
       setSelectedId(nextItem.id);
