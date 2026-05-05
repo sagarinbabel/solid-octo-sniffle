@@ -623,12 +623,12 @@ export default function PrototypePage() {
                 </div>
               </div>
 
-              <div className="grid gap-0 overflow-hidden rounded-2xl border border-slate-800 lg:grid-cols-2">
-                <div className="border-b border-slate-800 p-6 lg:border-b-0 lg:border-r">
-                  <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Original — what Sales wrote</p>
-                  <p className="mt-4 whitespace-pre-wrap text-sm leading-relaxed text-slate-300">{selectedItem.originalRequest}</p>
-                  <p className="mt-8 text-xs font-bold uppercase tracking-wider text-slate-500">Audit notes</p>
-                  <ul className="mt-3 space-y-2 font-mono text-xs text-slate-400">
+              <div className="grid gap-0 overflow-hidden rounded-2xl border border-stone-200 bg-white/80 shadow-xl shadow-stone-900/5 backdrop-blur lg:grid-cols-2">
+                <div className="border-b border-stone-200 p-6 lg:border-b-0 lg:border-r">
+                  <p className="text-xs font-bold uppercase tracking-wider text-stone-700">Original — what Sales wrote</p>
+                  <p className="mt-4 whitespace-pre-wrap text-sm leading-relaxed text-stone-950">{selectedItem.originalRequest}</p>
+                  <p className="mt-8 text-xs font-bold uppercase tracking-wider text-stone-700">Audit notes</p>
+                  <ul className="mt-3 space-y-2 font-mono text-xs text-stone-800">
                     <li>
                       <span className="opacity-70">{"// "}</span>schema: triage · valid
                     </li>
@@ -651,11 +651,11 @@ export default function PrototypePage() {
                     ))}
                   </ul>
                 </div>
-                <div className="bg-[rgba(15,23,42,0.40)] p-6">
-                  <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Structured brief</p>
-                  <h3 className="mt-3 text-lg font-bold text-slate-50">{t.clean_title}</h3>
-                  <p className="mt-2 text-sm leading-relaxed text-slate-300">{t.summary}</p>
-                  <div className="mt-6 grid grid-cols-2 border border-slate-700">
+                <div className="bg-stone-50 p-6">
+                  <p className="text-xs font-bold uppercase tracking-wider text-stone-700">Structured brief</p>
+                  <h3 className="mt-3 text-lg font-bold text-stone-950">{t.clean_title}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-stone-800">{t.summary}</p>
+                  <div className="mt-6 grid grid-cols-2 border border-stone-200">
                     {(
                       [
                         ["Request type", t.request_type],
@@ -668,21 +668,21 @@ export default function PrototypePage() {
                     ).map(([k, v], i) => (
                       <div
                         key={k}
-                        className={`border-slate-700 bg-[rgba(2,6,23,0.60)] p-4 ${i % 2 === 0 ? "border-r" : ""} ${i < 4 ? "border-b" : ""}`}
+                        className={`border-stone-200 bg-white p-4 ${i % 2 === 0 ? "border-r" : ""} ${i < 4 ? "border-b" : ""}`}
                       >
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{k}</p>
-                        <p className="mt-1 text-sm font-semibold text-slate-100">{v}</p>
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-stone-600">{k}</p>
+                        <p className="mt-1 text-sm font-semibold text-stone-950">{v}</p>
                       </div>
                     ))}
                   </div>
                 </div>
               </div>
 
-              <div className="grid gap-0 overflow-hidden rounded-2xl border border-slate-800 lg:grid-cols-2">
-                <div className="border-b border-slate-800 p-6 lg:border-b-0 lg:border-r">
+              <div className="grid gap-0 overflow-hidden rounded-2xl border border-stone-200 bg-white/80 shadow-xl shadow-stone-900/5 backdrop-blur lg:grid-cols-2">
+                <div className="border-b border-stone-200 p-6 lg:border-b-0 lg:border-r">
                   <div className="flex items-baseline justify-between gap-2">
-                    <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Missing information</p>
-                    <span className={`font-mono text-xs font-bold ${t.missing_information.length > 2 ? "text-amber-300" : "text-slate-300"}`}>
+                    <p className="text-xs font-bold uppercase tracking-wider text-stone-700">Missing information</p>
+                    <span className={`font-mono text-xs font-bold ${t.missing_information.length > 2 ? "text-amber-800" : "text-stone-700"}`}>
                       {String(t.missing_information.length).padStart(2, "0")} ITEMS
                     </span>
                   </div>
@@ -690,9 +690,9 @@ export default function PrototypePage() {
                     {t.missing_information.map((m, i) => (
                       <li
                         key={m}
-                        className="grid grid-cols-[40px_1fr] gap-3 border-t border-slate-800 py-4 text-sm text-slate-200 first:border-t-0"
+                        className="grid grid-cols-[40px_1fr] gap-3 border-t border-stone-200 py-4 text-sm text-stone-950 first:border-t-0"
                       >
-                        <span className="font-mono text-xs text-slate-500">{String(i + 1).padStart(2, "0")}</span>
+                        <span className="font-mono text-xs text-stone-500">{String(i + 1).padStart(2, "0")}</span>
                         <span>{m}</span>
                       </li>
                     ))}
@@ -700,16 +700,16 @@ export default function PrototypePage() {
                 </div>
                 <div className="p-6">
                   <div className="flex items-baseline justify-between gap-2">
-                    <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Risk flags</p>
-                    <span className="font-mono text-xs font-bold text-rose-300">{String(t.risk_flags.length).padStart(2, "0")} ITEMS</span>
+                    <p className="text-xs font-bold uppercase tracking-wider text-stone-700">Risk flags</p>
+                    <span className="font-mono text-xs font-bold text-rose-800">{String(t.risk_flags.length).padStart(2, "0")} ITEMS</span>
                   </div>
                   <ul className="mt-4 list-none space-y-0 p-0">
                     {t.risk_flags.map((r) => (
                       <li
                         key={r}
-                        className="grid grid-cols-[28px_1fr] gap-3 border-t border-slate-800 py-4 text-sm text-slate-200 first:border-t-0"
+                        className="grid grid-cols-[28px_1fr] gap-3 border-t border-stone-200 py-4 text-sm text-stone-950 first:border-t-0"
                       >
-                        <span className="text-lg font-black text-rose-400">!</span>
+                        <span className="text-lg font-black text-rose-700">!</span>
                         <span>{r}</span>
                       </li>
                     ))}
