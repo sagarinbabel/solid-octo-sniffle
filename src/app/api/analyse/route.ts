@@ -16,49 +16,47 @@ const requestSchema = z.object({
 const NIM_BASE_URL = "https://integrate.api.nvidia.com/v1";
 // Note: NIM Integrate latency can vary significantly by model.
 // Defaults chosen for consistent low latency on Integrate.
-const DEFAULT_PRIMARY_MODEL = "meta/llama-3.1-8b-instruct";
-const DEFAULT_FALLBACK_MODEL = "meta/llama-3.2-1b-instruct";
+const DEFAULT_PRIMARY_MODEL = "meta/llama-3.2-1b-instruct";
+const DEFAULT_FALLBACK_MODEL = "meta/llama-3.1-8b-instruct";
 const DEFAULT_TIMEOUT_MS = 12_000;
 const DEFAULT_CACHE_TTL_MS = 60_000;
 const DEFAULT_CACHE_MAX_ENTRIES = 100;
+const DEFAULT_MAX_TOKENS = 220;
 
 const missingLocalKeyError =
   "NVIDIA NIM API key is missing from .env.local. This prototype intentionally ignores shell environment keys. Create .env.local from .env.example, add NVIDIA_API_KEY, then restart npm run dev.";
 const missingProductionKeyError =
   "NVIDIA NIM API key is missing from the server environment. Add NVIDIA_API_KEY in your hosting provider's secure environment variable settings and redeploy.";
 
-const SYSTEM_PROMPT = `You are an internal AI request triage assistant for a dual-use deep-tech company. Your job is to protect software and operations teams from vague requests while helping Sales get useful answers faster. Turn messy customer/internal requests into structured, reviewable work. Do not promise feasibility. Do not allow direct software interruption unless the request is clear, urgent, and sufficiently specified. Flag missing information. Flag defence/customer-sensitive topics. Prefer asking for clarification before routing vague work to Software. Output valid JSON only.`;
-
-const JSON_SHAPE = `{
-  "clean_title": string,
-  "summary": string,
-  "request_type": string,
-  "urgency": "Low" | "Medium" | "High" | "Unknown",
-  "business_value": "Low" | "Medium" | "High" | "Unknown",
-  "technical_complexity": "Low" | "Medium" | "High" | "Unknown",
-  "sensitivity": "Normal" | "Customer confidential" | "Defence-sensitive" | "Unknown",
-  "missing_information": string[],
-  "suggested_route": string,
-  "suggested_next_action": string,
-  "software_interrupt_allowed": boolean,
-  "draft_clarification_to_sales": string,
-  "risk_flags": string[],
-  "recommended_status": string,
-  "audit_notes": string[],
-  "confidence": number
-}`;
+const SYSTEM_PROMPT = `You are an internal request-triage assistant. Protect Software/Ops from vague asks while helping Sales get clarity fast.
+Rules:
+- Output valid JSON only (no markdown).
+- Output must start with "{" and end with "}".
+- Be concise.
+- Never promise feasibility, delivery dates, or customer commitments.
+- Allow "software_interrupt_allowed" only if inputs are specific enough to act safely.
+`;
 
 function buildUserPrompt(requestText: string) {
   const context = mockedContextSnippets
-    .map((item) => `MOCKED CONTEXT - ${item.title}: ${item.body.slice(0, 260)}`)
+    .map((item) => `MOCKED CONTEXT - ${item.title}: ${item.body.slice(0, 180)}`)
     .join("\n");
 
-  return `Triage this Sales/customer/internal request for Head of Software review.
+  return `Triage the request for Head of Software review using ONLY the submitted request + mocked context.
+Include relevant mocked context TITLES in audit_notes (do not claim they are real).
 
-Use only the submitted request and mocked context. Mention relevant mocked context titles in audit_notes. Do not claim the mocked context is a real company policy.
+Hard constraints for speed:
+- missing_information: 3-6 items max
+- risk_flags: 1-4 items max
+- audit_notes: 2-5 items max
+- clean_title <= 90 chars
+- summary <= 240 chars
+- draft_clarification_to_sales <= 240 chars
 
-Requested JSON schema:
-${JSON_SHAPE}
+Return a single JSON object with exactly these keys:
+clean_title, summary, request_type, urgency, business_value, technical_complexity, sensitivity,
+missing_information, suggested_route, suggested_next_action, software_interrupt_allowed,
+draft_clarification_to_sales, risk_flags, recommended_status, audit_notes, confidence.
 
 ${context}
 
@@ -165,11 +163,13 @@ async function createCompletionWithTimeout({
   model,
   messages,
   timeoutMs,
+  maxTokens,
 }: {
   openai: OpenAI;
   model: string;
   messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[];
   timeoutMs: number;
+  maxTokens: number;
 }) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
@@ -178,9 +178,8 @@ async function createCompletionWithTimeout({
       {
         model,
         temperature: 0.2,
-        response_format: { type: "json_object" },
         // Keep completions bounded for latency.
-        max_tokens: 700,
+        max_tokens: maxTokens,
         messages,
       },
       { signal: controller.signal },
@@ -195,6 +194,7 @@ export async function POST(request: Request) {
   const fallbackModel = process.env.AI_MODEL_FALLBACK || DEFAULT_FALLBACK_MODEL;
   const timeoutMs = readEnvInt("AI_TIMEOUT_MS", DEFAULT_TIMEOUT_MS);
   const cacheTtlMs = readEnvInt("AI_CACHE_TTL_MS", DEFAULT_CACHE_TTL_MS);
+  const maxTokens = readEnvInt("AI_MAX_TOKENS", DEFAULT_MAX_TOKENS);
   const debugTimings = process.env.AI_DEBUG_TIMINGS === "1";
   const timestamp = new Date().toISOString();
   const t0 = nowMs();
@@ -246,14 +246,20 @@ export async function POST(request: Request) {
     let completion: OpenAI.Chat.Completions.ChatCompletion;
     const tModelStart = nowMs();
     try {
-      completion = await createCompletionWithTimeout({ openai, model: primaryModel, messages, timeoutMs });
+      completion = await createCompletionWithTimeout({ openai, model: primaryModel, messages, timeoutMs, maxTokens });
       const content = completion.choices[0]?.message?.content;
       if (!content) throw new Error("Model returned no content");
       rawJson = JSON.parse(extractJson(content));
     } catch (error) {
       // Retry once with a slightly larger model if we time out or fail JSON parsing/shape.
       modelUsed = fallbackModel;
-      completion = await createCompletionWithTimeout({ openai, model: fallbackModel, messages, timeoutMs: Math.max(timeoutMs, 15_000) });
+      completion = await createCompletionWithTimeout({
+        openai,
+        model: fallbackModel,
+        messages,
+        timeoutMs: Math.max(timeoutMs, 15_000),
+        maxTokens: Math.max(180, Math.floor(maxTokens * 0.75)),
+      });
       const content = completion.choices[0]?.message?.content;
       if (!content) {
         throw error instanceof Error ? error : new Error("Model returned no content");
