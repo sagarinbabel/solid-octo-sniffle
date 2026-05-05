@@ -11,9 +11,7 @@ Sales Portal | Head of Software Queue | How it Works
 ## Two entry points (main vs `/prototype`)
 
 - The main app flow (the default navigation) demonstrates the request triage workflow.
-- The `/prototype` route is an alternative UI for the same workflow. It includes a toggle that can switch between:
-  - live API calls to `/api/analyse`, and
-  - demo mode that marks up requests with known-good structured outputs when the endpoint is acting up.
+- The `/prototype` route is an alternative UI for the same workflow. It uses mocked/seeded data and is meant for layout and interaction exploration.
 
 ## Workflow
 
@@ -21,8 +19,8 @@ Sales Portal | Head of Software Queue | How it Works
 2. The frontend sends the request brief to the server-only `/api/analyse` route.
 3. In local development, the server reads `NVIDIA_API_KEY` directly from `.env.local` and ignores shell-exported keys.
 4. In production, the server reads `NVIDIA_API_KEY` from the host's secure server-side environment variables, such as Vercel Project Settings.
-5. The server adds mocked context snippets and calls the configured LLM.
-6. The model returns structured triage JSON.
+5. The server adds mocked context snippets and calls the configured LLM (unless `AI_FORCE_LOCAL=1` is enabled).
+6. The model returns structured triage JSON (or, on timeout, the server can return a local heuristic triage when `AI_ENABLE_LOCAL_FALLBACK=1`).
 7. Zod validates the response shape.
 8. Local safety checks flag missing information, sensitivity, unsupported commitments, owner routing, and software-interrupt risk.
 9. The Head of Software Queue shows the clean request, audit trail, and safety checks.
