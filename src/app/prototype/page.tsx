@@ -9,6 +9,7 @@ import { MOCK_EVAL, MOCK_TRIAGE, SEED_QUEUE, type PrototypeQueueItem } from "./m
 type Tab = "submit" | "queue" | "method";
 type CommitmentNeeded = "Yes" | "No";
 type SensitivityInput = "Normal" | "Customer confidential" | "Defence-sensitive" | "Unknown";
+type PrototypeRole = "Approver" | "Software engineer";
 
 type SalesForm = {
   customerName: string;
@@ -154,6 +155,7 @@ function Toast({ message, onDismiss }: { message: string; onDismiss: () => void 
 
 export default function PrototypePage() {
   const [activeTab, setActiveTab] = useState<Tab>("queue");
+  const [role] = useState<PrototypeRole>("Approver");
   const [queue, setQueue] = useState<PrototypeQueueItem[]>(() => [...SEED_QUEUE]);
   const [selectedId, setSelectedId] = useState<string>(SEED_QUEUE[0]?.id ?? "");
   const [form, setForm] = useState<SalesForm>(emptyForm);
@@ -224,7 +226,7 @@ export default function PrototypePage() {
 
   const stepBanner =
     activeTab === "queue"
-      ? "Step 02 / 02 · Reviewer routes structured briefs · 01 Submit · 02 AI structures · 03 Reviewer routes"
+      ? "Step 02 / 02 · Approver (Head of Software) routes structured briefs · 01 Submit · 02 AI structures · 03 Reviewer routes"
       : "Step 01 / 02 · Sales hands off · 01 Submit · 02 AI structures · 03 Reviewer routes";
 
   const t = selectedItem?.triage;
@@ -249,6 +251,7 @@ export default function PrototypePage() {
               <Pill tone="amber">Mocked clickable preview · /prototype</Pill>
               <Pill tone="cyan">No API</Pill>
               <Pill>Schema-aligned mock data</Pill>
+              <Pill tone={role === "Approver" ? "emerald" : "slate"}>Role: {role}</Pill>
             </div>
           </div>
         </header>
@@ -368,7 +371,10 @@ export default function PrototypePage() {
 
               <section className="rounded-2xl border border-slate-800 bg-slate-950/80 p-4 shadow-xl md:p-5">
                 <div className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Inbox</div>
-                <h2 className="text-xl font-semibold text-slate-50">Open queue</h2>
+                <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
+                  <h2 className="text-xl font-semibold text-slate-50">Open queue</h2>
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Approver view · routes/blocks requests</p>
+                </div>
                 <div className="mt-4 overflow-x-auto">
                   <div
                     className="min-w-[640px] border-t border-slate-700 pt-2"
@@ -686,7 +692,7 @@ export default function PrototypePage() {
                   Five steps between a Sales handoff and a routed decision. The model never sees real customer data in this prototype; the
                   Software team is not paged before a person reviews.
                 </p>
-                <div className="grid gap-3 border border-slate-800 md:grid-cols-5">
+                <div className="grid gap-3 md:grid-cols-5">
                   {(
                     [
                       { n: "01", t: "Sales submits", d: "Free-text request, customer name, deadline, sensitivity. No internal jargon required." },
@@ -698,35 +704,71 @@ export default function PrototypePage() {
                   ).map((s, i) => (
                     <div
                       key={s.n}
-                      className={`border-slate-800 bg-slate-900/40 p-4 md:min-h-[200px] ${i < 4 ? "md:border-r" : ""}`}
+                      className="group relative overflow-hidden rounded-2xl border border-stone-200 bg-white p-4 shadow-sm shadow-stone-900/5 md:min-h-[210px]"
                     >
-                      <div className="text-3xl font-bold tracking-tight text-cyan-300">{s.n}</div>
-                      <p className="mt-3 font-semibold text-slate-100">{s.t}</p>
-                      <p className="mt-2 text-xs leading-relaxed text-slate-400">{s.d}</p>
+                      <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-blue-700/60 via-cyan-500/50 to-emerald-600/50 opacity-70" />
+                      <div className="text-3xl font-extrabold tracking-tight text-blue-800">{s.n}</div>
+                      <p className="mt-3 text-sm font-semibold text-stone-900">{s.t}</p>
+                      <p className="mt-2 text-sm leading-relaxed text-stone-700">{s.d}</p>
+                      <div
+                        className={`pointer-events-none absolute -right-12 -top-12 h-28 w-28 rounded-full blur-2xl ${
+                          i % 2 === 0 ? "bg-blue-700/10" : "bg-emerald-700/10"
+                        }`}
+                        aria-hidden
+                      />
                     </div>
                   ))}
                 </div>
               </Card>
 
-              <div className="grid gap-0 overflow-hidden rounded-2xl border border-slate-800 lg:grid-cols-2">
-                <div className="border-b border-slate-800 bg-slate-900/30 p-6 lg:border-b-0 lg:border-r">
-                  <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Boundary · what it does</p>
-                  <ul className="mt-4 space-y-3 text-sm leading-relaxed text-slate-300">
-                    <li>· Structures messy free-text into a typed brief</li>
-                    <li>· Flags missing inputs and risk signals</li>
-                    <li>· Blocks Software interrupt when criteria fail</li>
-                    <li>· Surfaces the original verbatim alongside structured output</li>
+              <div className="grid gap-3 lg:grid-cols-2">
+                <section className="overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm shadow-stone-900/5">
+                  <div className="border-b border-stone-200 bg-blue-700/5 px-6 py-4">
+                    <p className="text-xs font-bold uppercase tracking-wider text-blue-900">Boundary · what it does</p>
+                  </div>
+                  <ul className="space-y-3 px-6 py-5 text-sm leading-relaxed text-stone-800">
+                    <li className="flex gap-3">
+                      <span className="mt-[6px] h-2 w-2 flex-none rounded-full bg-blue-700" aria-hidden />
+                      <span>Structures messy free-text into a typed brief</span>
+                    </li>
+                    <li className="flex gap-3">
+                      <span className="mt-[6px] h-2 w-2 flex-none rounded-full bg-blue-700" aria-hidden />
+                      <span>Flags missing inputs and risk signals</span>
+                    </li>
+                    <li className="flex gap-3">
+                      <span className="mt-[6px] h-2 w-2 flex-none rounded-full bg-blue-700" aria-hidden />
+                      <span>Blocks Software interrupt when criteria fail</span>
+                    </li>
+                    <li className="flex gap-3">
+                      <span className="mt-[6px] h-2 w-2 flex-none rounded-full bg-blue-700" aria-hidden />
+                      <span>Surfaces the original verbatim alongside structured output</span>
+                    </li>
                   </ul>
-                </div>
-                <div className="p-6">
-                  <p className="text-xs font-bold uppercase tracking-wider text-rose-300">Boundary · what it doesn&apos;t</p>
-                  <ul className="mt-4 space-y-3 text-sm leading-relaxed text-slate-300">
-                    <li>· Make customer-facing commitments</li>
-                    <li>· Auto-route to Software without human sign-off</li>
-                    <li>· Replace the reviewer&apos;s judgment</li>
-                    <li>· On /prototype: no live LLM — use / for /api/analyse</li>
+                </section>
+
+                <section className="overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm shadow-stone-900/5">
+                  <div className="border-b border-stone-200 bg-rose-700/5 px-6 py-4">
+                    <p className="text-xs font-bold uppercase tracking-wider text-rose-900">Boundary · what it doesn&apos;t</p>
+                  </div>
+                  <ul className="space-y-3 px-6 py-5 text-sm leading-relaxed text-stone-800">
+                    <li className="flex gap-3">
+                      <span className="mt-[6px] h-2 w-2 flex-none rounded-full bg-rose-700" aria-hidden />
+                      <span>Make customer-facing commitments</span>
+                    </li>
+                    <li className="flex gap-3">
+                      <span className="mt-[6px] h-2 w-2 flex-none rounded-full bg-rose-700" aria-hidden />
+                      <span>Auto-route to Software without human sign-off</span>
+                    </li>
+                    <li className="flex gap-3">
+                      <span className="mt-[6px] h-2 w-2 flex-none rounded-full bg-rose-700" aria-hidden />
+                      <span>Replace the reviewer&apos;s judgment</span>
+                    </li>
+                    <li className="flex gap-3">
+                      <span className="mt-[6px] h-2 w-2 flex-none rounded-full bg-rose-700" aria-hidden />
+                      <span>On /prototype: no live LLM — use / for /api/analyse</span>
+                    </li>
                   </ul>
-                </div>
+                </section>
               </div>
             </div>
           ) : null}

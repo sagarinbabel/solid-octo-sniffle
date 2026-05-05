@@ -1,10 +1,10 @@
-# AI Request Triage — Kelluu Core AI Architect Prototype
+# AI Request Triage — airship company Core AI Architect Prototype
 
 ## Context
 
-This prototype was built by/for Sagar Dubey as a demonstration for the Kelluu Core AI Architect application. It translates a broad need for an internal AI workflow backbone into a concrete request-triage workflow for Sales, customer-facing teams, Software, and Operations.
+This prototype was built by/for Sagar Dubey as a demonstration for the airship company Core AI Architect application. It translates a broad need for an internal AI workflow backbone into a concrete request-triage workflow for Sales, customer-facing teams, Software, and Operations.
 
-Kelluu is positioned publicly around persistent autonomous aerial data for defence, critical infrastructure, digital twins, environmental intelligence, and complex operating environments. This prototype uses that public positioning only to shape product messaging. It does not use confidential Kelluu data.
+airship company is positioned publicly around persistent autonomous aerial data for defence, critical infrastructure, digital twins, environmental intelligence, and complex operating environments. This prototype uses that public positioning only to shape product messaging. It does not use confidential airship company data.
 
 ## Business problem
 
@@ -36,7 +36,7 @@ Fast-growing dual-use deep-tech companies can lose engineering focus when vague 
 
 ## What is mocked
 
-- Kelluu internal data
+- airship company internal data
 - CRM/ERP/ticketing integrations
 - RBAC/SSO
 - on-prem deployment
@@ -90,7 +90,7 @@ flowchart TD
 - In production, the API key is loaded from the host's server-side environment variables, such as Vercel Project Settings.
 - Shell-exported `NVIDIA_API_KEY` values are intentionally ignored during local development for safety.
 - `.env.local` is ignored.
-- No confidential Kelluu data is used.
+- No confidential airship company data is used.
 - No external actions are taken.
 - No production systems are connected.
 - Customer-facing commitments require human approval.
