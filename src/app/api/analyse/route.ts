@@ -14,8 +14,10 @@ const requestSchema = z.object({
 });
 
 const NIM_BASE_URL = "https://integrate.api.nvidia.com/v1";
-const DEFAULT_PRIMARY_MODEL = "meta/llama-3.2-3b-instruct";
-const DEFAULT_FALLBACK_MODEL = "meta/llama-3.1-8b-instruct";
+// Note: NIM Integrate latency can vary significantly by model.
+// Defaults chosen for consistent low latency on Integrate.
+const DEFAULT_PRIMARY_MODEL = "meta/llama-3.1-8b-instruct";
+const DEFAULT_FALLBACK_MODEL = "meta/llama-3.2-1b-instruct";
 const DEFAULT_TIMEOUT_MS = 12_000;
 const DEFAULT_CACHE_TTL_MS = 60_000;
 const DEFAULT_CACHE_MAX_ENTRIES = 100;

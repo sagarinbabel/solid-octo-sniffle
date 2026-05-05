@@ -310,7 +310,7 @@ export default function PrototypePage() {
   const blocked = t ? !t.software_interrupt_allowed : true;
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(29,78,216,0.10),transparent_42%),radial-gradient(circle_at_top_right,rgba(6,95,70,0.10),transparent_44%),linear-gradient(180deg,#ffffff, #fbf7ef_42%, #ffffff)] text-stone-900">
+    <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(29,78,216,0.10),transparent_42%),radial-gradient(circle_at_top_right,rgba(6,95,70,0.10),transparent_44%),linear-gradient(180deg,#ffffff,#fbf7ef_42%,#ffffff)] text-stone-900">
       <div className="mx-auto max-w-7xl px-5 py-8">
         <header className="rounded-3xl border border-stone-200 bg-white/80 p-6 shadow-2xl shadow-stone-900/5 backdrop-blur">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
@@ -482,14 +482,14 @@ export default function PrototypePage() {
 
           {activeTab === "queue" && selectedItem && t ? (
             <div className="space-y-6">
-              <div className="rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3 text-sm text-slate-400">
+              <div className="rounded-2xl border border-slate-800 bg-[rgba(2,6,23,0.70)] px-4 py-3 text-sm text-slate-400">
                 <span className="font-semibold text-slate-200">{queue.length}</span> open ·{" "}
                 <span className="font-semibold text-rose-200">{counts.blocked}</span> blocked ·{" "}
                 <span className="font-semibold text-emerald-200">{counts.routable}</span> routable ·{" "}
                 <span className="font-semibold text-amber-200">{counts.reject}</span> reject
               </div>
 
-              <section className="rounded-2xl border border-slate-800 bg-slate-950/80 p-4 shadow-xl md:p-5">
+              <section className="rounded-2xl border border-slate-800 bg-[rgba(2,6,23,0.80)] p-4 shadow-xl md:p-5">
                 <div className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Inbox</div>
                 <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
                   <h2 className="text-xl font-semibold text-slate-50">Open queue</h2>
@@ -520,7 +520,9 @@ export default function PrototypePage() {
                           type="button"
                           onClick={() => selectRow(q.id)}
                           className={`grid w-full grid-cols-[12px_minmax(140px,1fr)_minmax(100px,160px)_minmax(72px,100px)_52px_minmax(88px,1fr)_28px] gap-3 border-b border-slate-800 px-1 py-4 text-left transition ${
-                            isSelected ? "border-l-4 border-l-cyan-300 bg-cyan-300/10 pl-0" : "hover:bg-slate-900/60"
+                            isSelected
+                              ? "border-l-4 border-l-cyan-300 bg-[rgba(34,211,238,0.10)] pl-0"
+                              : "hover:bg-[rgba(15,23,42,0.60)]"
                           }`}
                         >
                           <span className="flex items-center justify-center" aria-hidden>
@@ -555,8 +557,8 @@ export default function PrototypePage() {
 
               <div ref={detailAnchorRef} />
 
-              <section className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-950/80 shadow-xl lg:grid lg:min-h-[420px] lg:grid-cols-[1fr_2fr]">
-                <div className="flex flex-col justify-between border-b border-slate-800 bg-cyan-300/10 p-6 lg:border-b-0 lg:border-r lg:border-slate-800">
+              <section className="overflow-hidden rounded-2xl border border-slate-800 bg-[rgba(2,6,23,0.80)] shadow-xl lg:grid lg:min-h-[420px] lg:grid-cols-[1fr_2fr]">
+                <div className="flex flex-col justify-between border-b border-slate-800 bg-[rgba(34,211,238,0.10)] p-6 lg:border-b-0 lg:border-r lg:border-slate-800">
                   <div>
                     <p className="text-xs font-bold uppercase tracking-[0.2em] text-cyan-200/90">Selected request</p>
                     <p className="mt-3 text-xs font-semibold uppercase tracking-wider text-cyan-100/80">{selectedItem.customerName}</p>
@@ -568,7 +570,7 @@ export default function PrototypePage() {
                     <span>Conf. {Math.round(t.confidence * 100)}%</span>
                   </div>
                 </div>
-                <div className="bg-slate-950/40">
+                <div className="bg-[rgba(2,6,23,0.40)]">
                   <div className="grid grid-cols-2 gap-px bg-slate-800 sm:grid-cols-4">
                     {(
                       [
@@ -588,7 +590,7 @@ export default function PrototypePage() {
               </section>
 
               <div
-                className={`rounded-2xl border border-slate-800 bg-slate-950/90 px-5 py-6 md:grid md:grid-cols-[auto_1fr_auto] md:items-center md:gap-8 ${
+                className={`rounded-2xl border border-slate-800 bg-[rgba(2,6,23,0.90)] px-5 py-6 md:grid md:grid-cols-[auto_1fr_auto] md:items-center md:gap-8 ${
                   blocked ? "border-b-4 border-b-rose-400/80" : "border-b-4 border-b-cyan-300/80"
                 }`}
               >
@@ -649,7 +651,7 @@ export default function PrototypePage() {
                     ))}
                   </ul>
                 </div>
-                <div className="bg-slate-900/40 p-6">
+                <div className="bg-[rgba(15,23,42,0.40)] p-6">
                   <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Structured brief</p>
                   <h3 className="mt-3 text-lg font-bold text-slate-50">{t.clean_title}</h3>
                   <p className="mt-2 text-sm leading-relaxed text-slate-300">{t.summary}</p>
@@ -666,7 +668,7 @@ export default function PrototypePage() {
                     ).map(([k, v], i) => (
                       <div
                         key={k}
-                        className={`border-slate-700 bg-slate-950/60 p-4 ${i % 2 === 0 ? "border-r" : ""} ${i < 4 ? "border-b" : ""}`}
+                        className={`border-slate-700 bg-[rgba(2,6,23,0.60)] p-4 ${i % 2 === 0 ? "border-r" : ""} ${i < 4 ? "border-b" : ""}`}
                       >
                         <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{k}</p>
                         <p className="mt-1 text-sm font-semibold text-slate-100">{v}</p>
@@ -715,8 +717,8 @@ export default function PrototypePage() {
                 </div>
               </div>
 
-              <div className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-950/80 shadow-xl lg:grid lg:grid-cols-[1fr_2fr]">
-                <div className="flex flex-col justify-center border-b border-slate-800 bg-cyan-300/10 p-8 lg:border-b-0 lg:border-r">
+              <div className="overflow-hidden rounded-2xl border border-slate-800 bg-[rgba(2,6,23,0.80)] shadow-xl lg:grid lg:grid-cols-[1fr_2fr]">
+                <div className="flex flex-col justify-center border-b border-slate-800 bg-[rgba(34,211,238,0.10)] p-8 lg:border-b-0 lg:border-r">
                   <p className="text-xs font-bold uppercase tracking-[0.2em] text-cyan-200">Draft to Sales</p>
                   <h3 className="mt-4 text-2xl font-bold leading-tight text-slate-50">One round of questions beats three rounds of guesses.</h3>
                 </div>
@@ -753,7 +755,7 @@ export default function PrototypePage() {
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-slate-800 bg-slate-900/30 p-5">
+              <div className="rounded-2xl border border-slate-800 bg-[rgba(15,23,42,0.30)] p-5">
                 <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Reviewer action</p>
                 <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
                   {reviewerActions.map((action) => (
@@ -761,7 +763,7 @@ export default function PrototypePage() {
                       key={action}
                       type="button"
                       onClick={() => updateStatus(action)}
-                      className="rounded-xl border border-slate-700 bg-slate-950/80 px-4 py-4 text-left text-sm font-semibold text-slate-100 transition hover:border-cyan-300/50 hover:bg-cyan-300/10"
+                      className="rounded-xl border border-slate-700 bg-[rgba(2,6,23,0.80)] px-4 py-4 text-left text-sm font-semibold text-slate-100 transition hover:border-cyan-300/50 hover:bg-[rgba(34,211,238,0.10)]"
                     >
                       {action}
                     </button>
@@ -773,7 +775,7 @@ export default function PrototypePage() {
                 <p className="mb-4 text-slate-400">{selectedItem.evalResult.disclaimer}</p>
                 <div className="space-y-3">
                   {selectedItem.evalResult.checks.map((check) => (
-                    <div key={check.id} className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+                    <div key={check.id} className="rounded-xl border border-slate-800 bg-[rgba(15,23,42,0.60)] p-4">
                       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                         <div>
                           <p className="font-semibold text-slate-100">{check.label}</p>
