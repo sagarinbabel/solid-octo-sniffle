@@ -3,13 +3,14 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { sampleRequests } from "@/lib/samples";
-import type { EvalCheck } from "@/lib/schema";
+import type { AnalyseResponse, EvalCheck, EvalResult, TriageResult } from "@/lib/schema";
 import { MOCK_EVAL, MOCK_TRIAGE, SEED_QUEUE, type PrototypeQueueItem } from "./mock-data";
 
 type Tab = "submit" | "queue" | "method";
 type CommitmentNeeded = "Yes" | "No";
 type SensitivityInput = "Normal" | "Customer confidential" | "Defence-sensitive" | "Unknown";
 type PrototypeRole = "Approver" | "Software engineer";
+type TriageMode = "demo" | "live";
 
 type SalesForm = {
   customerName: string;
@@ -136,6 +137,8 @@ const reviewerActions = [
   "Reject / not now",
 ] as const;
 
+type AnalysePayload = Partial<AnalyseResponse> & { error?: string; evalResult?: EvalResult };
+
 function Toast({ message, onDismiss }: { message: string; onDismiss: () => void }) {
   useEffect(() => {
     if (!message) return;
@@ -153,14 +156,40 @@ function Toast({ message, onDismiss }: { message: string; onDismiss: () => void 
   );
 }
 
+const unavailableSafetyResult: EvalResult = {
+  score: 0,
+  disclaimer: "Safety checks were not available for this response. Re-run triage after refreshing the app.",
+  checks: [
+    {
+      id: "missing-safety-checks",
+      label: "Safety checks unavailable",
+      status: "warning",
+      explanation: "The AI response did not include local safety-check output, so this request should stay in human review.",
+    },
+  ],
+};
+
+function resolveSafetyResult(payload: unknown): EvalResult | null {
+  if (!payload || typeof payload !== "object") return null;
+  const candidate = (payload as { safetyResult?: unknown; evalResult?: unknown }).safetyResult ?? (payload as { evalResult?: unknown }).evalResult;
+  if (!candidate || typeof candidate !== "object") return null;
+  const value = candidate as Partial<EvalResult>;
+  if (typeof value.score !== "number" || !Array.isArray(value.checks) || typeof value.disclaimer !== "string") {
+    return null;
+  }
+  return value as EvalResult;
+}
+
 export default function PrototypePage() {
   const [activeTab, setActiveTab] = useState<Tab>("queue");
   const [role] = useState<PrototypeRole>("Approver");
+  const [mode, setMode] = useState<TriageMode>("demo");
   const [queue, setQueue] = useState<PrototypeQueueItem[]>(() => [...SEED_QUEUE]);
   const [selectedId, setSelectedId] = useState<string>(SEED_QUEUE[0]?.id ?? "");
   const [form, setForm] = useState<SalesForm>(emptyForm);
   const [selectedSampleId, setSelectedSampleId] = useState(sampleRequests[0].id);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   const [toast, setToast] = useState("");
   const detailAnchorRef = useRef<HTMLDivElement>(null);
 
@@ -185,31 +214,79 @@ export default function PrototypePage() {
     });
   }
 
-  function submitMockTriage() {
+  async function submitForTriage() {
     setLoading(true);
-    const triage = MOCK_TRIAGE[selectedSampleId] ?? MOCK_TRIAGE["defence-rfi"];
-    const evalResult = MOCK_EVAL[selectedSampleId] ?? MOCK_EVAL["defence-rfi"];
-    const originalRequest = buildRequestText(form);
-    window.setTimeout(() => {
+    setError("");
+    try {
+      const originalRequest = buildRequestText(form);
+
+      if (mode === "demo") {
+        const triage = MOCK_TRIAGE[selectedSampleId] ?? MOCK_TRIAGE["defence-rfi"];
+        const evalResult = MOCK_EVAL[selectedSampleId] ?? MOCK_EVAL["defence-rfi"];
+
+        const newItem: PrototypeQueueItem = {
+          id: crypto.randomUUID(),
+          sampleId: selectedSampleId,
+          customerName: form.customerName || "Unnamed opportunity",
+          deadline: form.deadline || "Unknown",
+          originalRequest,
+          status: triage.recommended_status,
+          submittedAt: "Just now",
+          triage,
+          evalResult,
+          model: "deepseek-ai/deepseek-v4-pro",
+          timestamp: new Date().toISOString(),
+        };
+
+        setQueue((q) => [newItem, ...q]);
+        setSelectedId(newItem.id);
+        setActiveTab("queue");
+        setToast("Submitted · structured by AI Triage (demo mock)");
+        return;
+      }
+
+      const response = await fetch("/api/analyse", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ requestText: originalRequest }),
+      });
+
+      const payload = (await response.json()) as AnalysePayload;
+      if (!response.ok) {
+        setError(payload.error || "AI triage failed. Check your API key and try again.");
+        return;
+      }
+
+      if (!payload.result) {
+        setError("AI triage returned an incomplete response. Refresh and try again.");
+        return;
+      }
+
+      const safetyResult = resolveSafetyResult(payload) ?? unavailableSafetyResult;
+
       const newItem: PrototypeQueueItem = {
         id: crypto.randomUUID(),
         sampleId: selectedSampleId,
         customerName: form.customerName || "Unnamed opportunity",
         deadline: form.deadline || "Unknown",
         originalRequest,
-        status: triage.recommended_status,
-        submittedAt: "Just now",
-        triage,
-        evalResult,
-        model: "deepseek-ai/deepseek-v4-pro",
-        timestamp: new Date().toISOString(),
+        status: payload.result.recommended_status,
+        submittedAt: new Date().toLocaleString(),
+        triage: payload.result as TriageResult,
+        evalResult: safetyResult,
+        model: payload.model ?? "unknown-model",
+        timestamp: payload.timestamp ?? new Date().toISOString(),
       };
+
       setQueue((q) => [newItem, ...q]);
       setSelectedId(newItem.id);
       setActiveTab("queue");
+      setToast("Submitted · structured by AI Triage (live API)");
+    } catch {
+      setError("Unable to reach the triage service. Check the local server and try again.");
+    } finally {
       setLoading(false);
-      setToast("Submitted · structured by AI Triage (mock)");
-    }, 600);
+    }
   }
 
   function updateStatus(status: string) {
@@ -240,7 +317,8 @@ export default function PrototypePage() {
             <div>
               <h1 className="text-4xl font-bold tracking-tight md:text-5xl">AI Request Triage</h1>
               <p className="mt-4 max-w-3xl text-lg text-stone-700">
-                Mocked clickable preview — editorial queue layout on the current build&apos;s palette.                 Live triage stays on{" "}
+                New queue design showcase. Default is <span className="font-semibold">Demo mode</span> (instant mock, no API call). Switch to{" "}
+                <span className="font-semibold">Live mode</span> to call the real triage API. Live app remains on{" "}
                 <Link href="/" className="font-semibold text-blue-700 underline underline-offset-2 hover:text-blue-800">
                   /
                 </Link>
@@ -248,10 +326,47 @@ export default function PrototypePage() {
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Pill tone="amber">Mocked clickable preview · /prototype</Pill>
-              <Pill tone="cyan">No API</Pill>
-              <Pill>Schema-aligned mock data</Pill>
+              <Pill tone="amber">Prototype design · /prototype</Pill>
+              <Pill tone={mode === "demo" ? "amber" : "emerald"}>{mode === "demo" ? "Demo mode · instant mock" : "Live mode · API call"}</Pill>
+              <Pill tone="cyan">Model: {selectedItem?.model ?? "unknown-model"}</Pill>
+              <Pill>In-memory queue</Pill>
               <Pill tone={role === "Approver" ? "emerald" : "slate"}>Role: {role}</Pill>
+            </div>
+          </div>
+          <div className="mt-5 flex flex-col gap-3 rounded-2xl border border-stone-200 bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="text-sm font-semibold text-stone-800">
+              Mode:{" "}
+              <span className={mode === "demo" ? "text-amber-800" : "text-emerald-800"}>
+                {mode === "demo" ? "Demo (no API call, instant mock)" : "Live (calls /api/analyse)"}
+              </span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setMode("demo");
+                  setError("");
+                  setToast("Switched to Demo mode · instant mock responses");
+                }}
+                className={`rounded-xl px-4 py-2 text-sm font-bold transition ${
+                  mode === "demo" ? "bg-amber-700 text-white" : "border border-stone-300 bg-white text-stone-800 hover:bg-stone-50"
+                }`}
+              >
+                Demo
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setMode("live");
+                  setError("");
+                  setToast("Switched to Live mode · API calls enabled");
+                }}
+                className={`rounded-xl px-4 py-2 text-sm font-bold transition ${
+                  mode === "live" ? "bg-emerald-700 text-white" : "border border-stone-300 bg-white text-stone-800 hover:bg-stone-50"
+                }`}
+              >
+                Live
+              </button>
             </div>
           </div>
         </header>
@@ -272,16 +387,20 @@ export default function PrototypePage() {
         </nav>
 
         <div className="mt-3 flex flex-col gap-2 rounded-xl border border-stone-200 bg-white/75 px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-stone-600 sm:flex-row sm:items-center sm:justify-between">
-          <span className="text-stone-700">deepseek-ai/deepseek-v4-pro · Schema valid · Safety mock</span>
-          <span>Mocked data only</span>
+          <span className="text-stone-700">{selectedItem?.model ?? "unknown-model"} · Schema validation · Local safety checks</span>
+          <span>{mode === "demo" ? "DEMO MODE · no API call" : "LIVE MODE · calls /api/analyse"} · No DB</span>
         </div>
 
         <div className="mt-2 rounded-lg border border-blue-700/20 bg-blue-700/5 px-4 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-blue-900">{stepBanner}</div>
 
         <div className="mt-6">
           {activeTab === "submit" ? (
-            <Card title="Sales Portal" eyebrow="Submit for triage (mock)">
-              <p>Submit loads the matching seeded triage for the selected sample. No server call.</p>
+            <Card title="Sales Portal" eyebrow={`Submit for triage (${mode === "demo" ? "demo" : "live"})`}>
+              <p>
+                {mode === "demo"
+                  ? "Demo mode is instant and predictable: it loads a schema-aligned mock triage for the selected sample (no server call)."
+                  : "Live mode calls the real `/api/analyse` route and stores the response in the local prototype queue."}
+              </p>
               <div className="mt-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                 <div className="flex-1">
                   <label className="block text-sm font-semibold text-stone-800" htmlFor="proto-sample">
@@ -349,13 +468,14 @@ export default function PrototypePage() {
                   className="mt-2 w-full rounded-xl border border-stone-300 bg-white p-4 text-stone-900 outline-none ring-blue-700/30 focus:ring-4"
                 />
               </label>
+              {error ? <p className="mt-4 rounded-xl border border-rose-700/20 bg-rose-700/10 p-3 text-rose-950">{error}</p> : null}
               <button
                 type="button"
-                onClick={submitMockTriage}
+                onClick={submitForTriage}
                 disabled={loading}
                 className="mt-5 rounded-xl bg-blue-700 px-5 py-3 font-bold text-white shadow-lg shadow-stone-900/10 transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {loading ? "Triaging…" : "Submit for AI triage →"}
+                {loading ? "Triaging…" : mode === "demo" ? "Submit (instant demo) →" : "Submit (live API) →"}
               </button>
             </Card>
           ) : null}
@@ -696,7 +816,7 @@ export default function PrototypePage() {
                   {(
                     [
                       { n: "01", t: "Sales submits", d: "Free-text request, customer name, deadline, sensitivity. No internal jargon required." },
-                      { n: "02", t: "AI structures", d: "Server-side LLM on the live app. Output validated against the triage schema." },
+                      { n: "02", t: "AI structures", d: "Server-side LLM via /api/analyse. Output validated against the triage schema." },
                       { n: "03", t: "Safety checks", d: "Local checks for schema validity and interrupt control before reviewer handoff." },
                       { n: "04", t: "Reviewer routes", d: "Head of Software clarifies, blocks, or routes to Ops, Security, or Software." },
                       { n: "05", t: "Sales sees status", d: "Updated status visible to Sales — closing the loop without paging Software." },
