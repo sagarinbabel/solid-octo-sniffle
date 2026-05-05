@@ -57,10 +57,10 @@ flowchart TD
 2. The browser sends a composed request brief to `/api/analyse`.
 3. The server route validates input.
 4. The server attaches hardcoded mocked context snippets.
-5. The server calls the NVIDIA NIM OpenAI-compatible endpoint using `NVIDIA_API_KEY` from server-side environment variables.
-6. The model returns the exact triage JSON shape.
-7. The server parses and validates JSON with Zod.
-8. Local safety checks run server-side.
+5. The server calls the NVIDIA NIM OpenAI-compatible endpoint using `NVIDIA_API_KEY` from server-side environment variables (unless `AI_FORCE_LOCAL=1` is enabled).
+6. The model returns triage JSON, which the server parses and validates with Zod.
+7. Local safety checks run server-side.
+8. If a model call times out and `AI_ENABLE_LOCAL_FALLBACK=1`, the server returns a local heuristic triage (`model: "local-fallback"`) instead of failing.
 9. The Sales Portal adds the request to a local queue.
 10. The Head of Software Queue shows the structured request, safety checks, audit trail, and local routing actions.
 
@@ -79,19 +79,24 @@ Open `http://localhost:3000`.
 
 ```bash
 NVIDIA_API_KEY=your_server_side_key
-AI_MODEL=deepseek-ai/deepseek-v4-pro
+AI_MODEL=meta/llama-3.1-8b-instruct
 ```
 
 Optional tuning knobs for `/api/analyse`:
 
 ```bash
 # Model selection
-AI_MODEL=meta/llama-3.2-1b-instruct
+AI_MODEL=meta/llama-3.1-8b-instruct
 AI_MODEL_FALLBACK=meta/llama-3.1-8b-instruct
 
 # Latency / resilience
 AI_TIMEOUT_MS=12000
 AI_MAX_TOKENS=220
+AI_ENABLE_FALLBACK=0
+AI_ENABLE_LOCAL_FALLBACK=1
+
+# Demo speed mode: skip the model entirely
+AI_FORCE_LOCAL=0
 
 # Demo cache (in-memory per server process)
 AI_CACHE_TTL_MS=60000
@@ -103,10 +108,13 @@ AI_DEBUG_TIMINGS=1
 Defaults (if unset):
 
 - `AI_MODEL`: `meta/llama-3.2-1b-instruct`
-- `AI_MODEL_FALLBACK`: `meta/llama-3.1-8b-instruct` (used when the primary call times out or the response fails JSON parsing/shape)
+- `AI_MODEL_FALLBACK`: `meta/llama-3.1-8b-instruct`
 - `AI_TIMEOUT_MS`: `12000`
 - `AI_MAX_TOKENS`: `220`
 - `AI_CACHE_TTL_MS`: `60000`
+- `AI_ENABLE_FALLBACK`: `0` (fail-fast, no automatic retry)
+- `AI_ENABLE_LOCAL_FALLBACK`: `1` (return heuristic triage when a timeout occurs)
+- `AI_FORCE_LOCAL`: `0` (call the model by default)
 
 Do not create `NEXT_PUBLIC_NVIDIA_API_KEY`. The API key must stay server-side. For local development, the API route intentionally reads `NVIDIA_API_KEY` from `.env.local` only and ignores shell-exported keys, so accidental terminal environment secrets are not used.
 

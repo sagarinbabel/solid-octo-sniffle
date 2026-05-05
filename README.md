@@ -113,7 +113,7 @@ Copy `.env.example` to `.env.local`, then add your key:
 
 ```bash
 NVIDIA_API_KEY=your_server_side_key
-AI_MODEL=deepseek-ai/deepseek-v4-pro
+AI_MODEL=meta/llama-3.1-8b-instruct
 ```
 
 Never use `NEXT_PUBLIC_NVIDIA_API_KEY`. The browser calls `/api/analyse`; only the server route calls NVIDIA NIM. Local development reads `NVIDIA_API_KEY` from `.env.local` and ignores keys exported in your shell environment. Production reads `NVIDIA_API_KEY` from secure server-side hosting settings.
@@ -123,12 +123,21 @@ Never use `NEXT_PUBLIC_NVIDIA_API_KEY`. The browser calls `/api/analyse`; only t
 The server route supports optional environment variables to tune latency and defaults:
 
 ```bash
-AI_MODEL=meta/llama-3.2-1b-instruct
+AI_MODEL=meta/llama-3.1-8b-instruct
 AI_MODEL_FALLBACK=meta/llama-3.1-8b-instruct
 AI_TIMEOUT_MS=12000
 AI_MAX_TOKENS=220
 AI_CACHE_TTL_MS=60000
 AI_DEBUG_TIMINGS=1
+
+# Default behavior is fail-fast on model errors/timeouts (no automatic retry).
+AI_ENABLE_FALLBACK=0
+
+# When enabled, a timed-out model call returns a fast local heuristic triage (model: "local-fallback") instead of 500.
+AI_ENABLE_LOCAL_FALLBACK=1
+
+# Fast demo mode: skip the model call entirely and always return the local heuristic triage.
+AI_FORCE_LOCAL=0
 ```
 
 ## How to test locally
