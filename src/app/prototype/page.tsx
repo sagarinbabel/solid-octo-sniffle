@@ -36,11 +36,11 @@ const emptyForm: SalesForm = {
 
 function Pill({ children, tone = "slate" }: { children: React.ReactNode; tone?: "slate" | "cyan" | "amber" | "rose" | "emerald" }) {
   const styles = {
-    slate: "border-slate-700 bg-slate-900 text-slate-300",
-    cyan: "border-cyan-300/40 bg-cyan-300/10 text-cyan-100",
-    amber: "border-amber-300/40 bg-amber-300/10 text-amber-100",
-    rose: "border-rose-300/40 bg-rose-300/10 text-rose-100",
-    emerald: "border-emerald-300/40 bg-emerald-300/10 text-emerald-100",
+    slate: "border-stone-300 bg-white text-stone-700",
+    cyan: "border-blue-600/25 bg-blue-600/10 text-blue-900",
+    amber: "border-amber-700/25 bg-amber-700/10 text-amber-950",
+    rose: "border-rose-700/20 bg-rose-700/10 text-rose-950",
+    emerald: "border-emerald-800/25 bg-emerald-800/10 text-emerald-950",
   };
   return (
     <span className={`inline-flex max-w-full rounded-full border px-3 py-1 text-xs font-semibold leading-5 ${styles[tone]}`}>{children}</span>
@@ -49,10 +49,10 @@ function Pill({ children, tone = "slate" }: { children: React.ReactNode; tone?: 
 
 function Card({ title, eyebrow, children }: { title: string; eyebrow?: string; children: React.ReactNode }) {
   return (
-    <section className="rounded-2xl border border-slate-800 bg-slate-950/80 p-5 shadow-xl shadow-slate-950/30">
-      {eyebrow ? <p className="mb-2 text-xs font-semibold uppercase tracking-[0.24em] text-cyan-300">{eyebrow}</p> : null}
-      <h2 className="text-lg font-semibold text-slate-50">{title}</h2>
-      <div className="mt-4 text-sm leading-6 text-slate-300">{children}</div>
+    <section className="rounded-2xl border border-stone-200 bg-white/80 p-5 shadow-xl shadow-stone-900/5 backdrop-blur">
+      {eyebrow ? <p className="mb-2 text-xs font-semibold uppercase tracking-[0.24em] text-blue-700">{eyebrow}</p> : null}
+      <h2 className="text-lg font-semibold text-stone-900">{title}</h2>
+      <div className="mt-4 text-sm leading-6 text-stone-700">{children}</div>
     </section>
   );
 }
@@ -70,12 +70,12 @@ function TextField({
 }) {
   return (
     <label className="block">
-      <span className="text-sm font-semibold text-slate-200">{label}</span>
+      <span className="text-sm font-semibold text-stone-800">{label}</span>
       <input
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-900 p-3 text-slate-100 outline-none ring-cyan-300 focus:ring-2"
+        className="mt-2 w-full rounded-xl border border-stone-300 bg-white p-3 text-stone-900 outline-none ring-blue-700/30 focus:ring-4"
       />
     </label>
   );
@@ -83,12 +83,12 @@ function TextField({
 
 function ListBlock({ items, empty = "None listed." }: { items?: string[]; empty?: string }) {
   if (!items?.length) {
-    return <p className="text-slate-500">{empty}</p>;
+    return <p className="text-stone-500">{empty}</p>;
   }
   return (
     <ul className="space-y-2">
       {items.map((item) => (
-        <li key={item} className="rounded-xl border border-slate-800 bg-slate-900/70 px-3 py-2">
+        <li key={item} className="rounded-xl border border-stone-200 bg-[#fbf7ef] px-3 py-2 text-stone-800">
           {item}
         </li>
       ))}
@@ -144,10 +144,10 @@ function Toast({ message, onDismiss }: { message: string; onDismiss: () => void 
   if (!message) return null;
   return (
     <div
-      className="fixed bottom-8 left-1/2 z-[100] -translate-x-1/2 rounded-lg border border-slate-700 bg-slate-950 px-5 py-3 text-sm font-semibold text-slate-100 shadow-lg shadow-black/40"
+      className="fixed bottom-8 left-1/2 z-[100] -translate-x-1/2 rounded-lg border border-stone-200 bg-white px-5 py-3 text-sm font-semibold text-stone-900 shadow-lg shadow-stone-900/10"
       role="status"
     >
-      <span className="border-l-4 border-cyan-300 pl-3">{message}</span>
+      <span className="border-l-4 border-blue-700 pl-3">{message}</span>
     </div>
   );
 }
@@ -231,15 +231,15 @@ export default function PrototypePage() {
   const blocked = t ? !t.software_interrupt_allowed : true;
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,#16324f,transparent_32%),linear-gradient(135deg,#020617,#0f172a_45%,#111827)] text-slate-100">
+    <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(29,78,216,0.10),transparent_42%),radial-gradient(circle_at_top_right,rgba(6,95,70,0.10),transparent_44%),linear-gradient(180deg,#ffffff, #fbf7ef_42%, #ffffff)] text-stone-900">
       <div className="mx-auto max-w-7xl px-5 py-8">
-        <header className="rounded-3xl border border-slate-800 bg-slate-950/75 p-6 shadow-2xl shadow-cyan-950/20 backdrop-blur">
+        <header className="rounded-3xl border border-stone-200 bg-white/80 p-6 shadow-2xl shadow-stone-900/5 backdrop-blur">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <h1 className="text-4xl font-bold tracking-tight md:text-5xl">AI Request Triage</h1>
-              <p className="mt-4 max-w-3xl text-lg text-slate-300">
+              <p className="mt-4 max-w-3xl text-lg text-stone-700">
                 Mocked clickable preview — editorial queue layout on the current build&apos;s palette.                 Live triage stays on{" "}
-                <Link href="/" className="font-semibold text-cyan-300 underline underline-offset-2 hover:text-cyan-200">
+                <Link href="/" className="font-semibold text-blue-700 underline underline-offset-2 hover:text-blue-800">
                   /
                 </Link>
                 .
@@ -253,14 +253,14 @@ export default function PrototypePage() {
           </div>
         </header>
 
-        <nav className="mt-6 grid gap-2 rounded-2xl border border-slate-800 bg-slate-950/70 p-2 md:grid-cols-3">
+        <nav className="mt-6 grid gap-2 rounded-2xl border border-stone-200 bg-white/75 p-2 backdrop-blur md:grid-cols-3">
           {tabs.map((tab) => (
             <button
               key={tab.id}
               type="button"
               onClick={() => setActiveTab(tab.id)}
               className={`rounded-xl px-3 py-3 text-sm font-semibold transition ${
-                activeTab === tab.id ? "bg-cyan-300 text-slate-950" : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                activeTab === tab.id ? "bg-blue-700 text-white" : "text-stone-700 hover:bg-stone-100 hover:text-stone-900"
               }`}
             >
               {tab.label}
@@ -268,12 +268,12 @@ export default function PrototypePage() {
           ))}
         </nav>
 
-        <div className="mt-3 flex flex-col gap-2 rounded-xl border border-slate-800 bg-slate-900/80 px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-slate-400 sm:flex-row sm:items-center sm:justify-between">
-          <span className="text-slate-300">deepseek-ai/deepseek-v4-pro · Schema valid · Safety mock</span>
+        <div className="mt-3 flex flex-col gap-2 rounded-xl border border-stone-200 bg-white/75 px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-stone-600 sm:flex-row sm:items-center sm:justify-between">
+          <span className="text-stone-700">deepseek-ai/deepseek-v4-pro · Schema valid · Safety mock</span>
           <span>Mocked data only</span>
         </div>
 
-        <div className="mt-2 rounded-lg border border-cyan-300/25 bg-cyan-300/5 px-4 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-cyan-100/90">{stepBanner}</div>
+        <div className="mt-2 rounded-lg border border-blue-700/20 bg-blue-700/5 px-4 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-blue-900">{stepBanner}</div>
 
         <div className="mt-6">
           {activeTab === "submit" ? (
@@ -281,14 +281,14 @@ export default function PrototypePage() {
               <p>Submit loads the matching seeded triage for the selected sample. No server call.</p>
               <div className="mt-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                 <div className="flex-1">
-                  <label className="block text-sm font-semibold text-slate-200" htmlFor="proto-sample">
+                  <label className="block text-sm font-semibold text-stone-800" htmlFor="proto-sample">
                     Load sample
                   </label>
                   <select
                     id="proto-sample"
                     value={selectedSampleId}
                     onChange={(e) => applySample(e.target.value)}
-                    className="mt-2 w-full max-w-md rounded-xl border border-slate-700 bg-slate-900 p-3 text-slate-100 outline-none ring-cyan-300 focus:ring-2"
+                    className="mt-2 w-full max-w-md rounded-xl border border-stone-300 bg-white p-3 text-stone-900 outline-none ring-blue-700/30 focus:ring-4"
                   >
                     {sampleRequests.map((s) => (
                       <option key={s.id} value={s.id}>
@@ -304,11 +304,11 @@ export default function PrototypePage() {
               </div>
               <div className="mt-4 grid gap-4 md:grid-cols-2">
                 <label className="block">
-                  <span className="text-sm font-semibold text-slate-200">Sensitivity</span>
+                  <span className="text-sm font-semibold text-stone-800">Sensitivity</span>
                   <select
                     value={form.sensitivity}
                     onChange={(e) => updateForm("sensitivity", e.target.value as SensitivityInput)}
-                    className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-900 p-3 text-slate-100 outline-none ring-cyan-300 focus:ring-2"
+                    className="mt-2 w-full rounded-xl border border-stone-300 bg-white p-3 text-stone-900 outline-none ring-blue-700/30 focus:ring-4"
                   >
                     <option>Normal</option>
                     <option>Customer confidential</option>
@@ -317,11 +317,11 @@ export default function PrototypePage() {
                   </select>
                 </label>
                 <label className="block">
-                  <span className="text-sm font-semibold text-slate-200">Customer-facing commitment needed?</span>
+                  <span className="text-sm font-semibold text-stone-800">Customer-facing commitment needed?</span>
                   <select
                     value={form.commitmentNeeded}
                     onChange={(e) => updateForm("commitmentNeeded", e.target.value as CommitmentNeeded)}
-                    className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-900 p-3 text-slate-100 outline-none ring-cyan-300 focus:ring-2"
+                    className="mt-2 w-full rounded-xl border border-stone-300 bg-white p-3 text-stone-900 outline-none ring-blue-700/30 focus:ring-4"
                   >
                     <option>Yes</option>
                     <option>No</option>
@@ -329,28 +329,28 @@ export default function PrototypePage() {
                 </label>
               </div>
               <label className="mt-4 block">
-                <span className="text-sm font-semibold text-slate-200">Request summary</span>
+                <span className="text-sm font-semibold text-stone-800">Request summary</span>
                 <textarea
                   value={form.requestSummary}
                   onChange={(e) => updateForm("requestSummary", e.target.value)}
                   rows={5}
-                  className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-900 p-4 text-slate-100 outline-none ring-cyan-300 focus:ring-2"
+                  className="mt-2 w-full rounded-xl border border-stone-300 bg-white p-4 text-stone-900 outline-none ring-blue-700/30 focus:ring-4"
                 />
               </label>
               <label className="mt-4 block">
-                <span className="text-sm font-semibold text-slate-200">What do you need from Software/Ops?</span>
+                <span className="text-sm font-semibold text-stone-800">What do you need from Software/Ops?</span>
                 <textarea
                   value={form.softwareNeed}
                   onChange={(e) => updateForm("softwareNeed", e.target.value)}
                   rows={4}
-                  className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-900 p-4 text-slate-100 outline-none ring-cyan-300 focus:ring-2"
+                  className="mt-2 w-full rounded-xl border border-stone-300 bg-white p-4 text-stone-900 outline-none ring-blue-700/30 focus:ring-4"
                 />
               </label>
               <button
                 type="button"
                 onClick={submitMockTriage}
                 disabled={loading}
-                className="mt-5 rounded-xl bg-cyan-300 px-5 py-3 font-bold text-slate-950 shadow-lg shadow-cyan-950/30 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-60"
+                className="mt-5 rounded-xl bg-blue-700 px-5 py-3 font-bold text-white shadow-lg shadow-stone-900/10 transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {loading ? "Triaging…" : "Submit for AI triage →"}
               </button>
