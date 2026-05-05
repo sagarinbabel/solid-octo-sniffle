@@ -24,6 +24,7 @@ const DEFAULT_CACHE_MAX_ENTRIES = 100;
 const DEFAULT_MAX_TOKENS = 220;
 const DEFAULT_ENABLE_FALLBACK = false;
 const DEFAULT_CONTEXT_CHARS = 80;
+const DEFAULT_ENABLE_LOCAL_FALLBACK = true;
 
 const missingLocalKeyError =
   "NVIDIA NIM API key is missing from .env.local. This prototype intentionally ignores shell environment keys. Create .env.local from .env.example, add NVIDIA_API_KEY, then restart npm run dev.";
@@ -109,6 +110,55 @@ function coerceJsonObject(raw: string) {
     .replace(/\u0000/g, "")
     .trim();
   return cleaned;
+}
+
+function buildLocalFallbackTriage(requestText: string) {
+  const lower = requestText.toLowerCase();
+  const isDefence = /\bdefen[cs]e\b|\bgovernment\b|\bmilitary\b/.test(lower);
+  const isCommitment = /\bpromise\b|\bcommit\b|\bguarantee\b/.test(lower);
+  const isStatusUpdate = /\bstatus update\b|\beta\b|\bwhen\b|\bready\b|\bdeliver\b/.test(lower);
+  const wantsDemo = /\bdemo\b|\bimpress\b|\bshowcase\b/.test(lower);
+
+  const missing: string[] = [];
+  if (isStatusUpdate) missing.push("Customer ID / account", "Which deliverable/report", "Who owns the ETA (Ops/Delivery)");
+  if (wantsDemo) missing.push("Customer / opportunity name", "Audience and seniority", "Success criteria for the demo");
+  if (isDefence) missing.push("AOI / location", "Handling / approval path for defence-sensitive context");
+  if (!missing.length) missing.push("Customer / opportunity name", "What outcome Sales wants", "Decision owner / deadline owner");
+
+  const sensitivity = isDefence ? "Defence-sensitive" : lower.includes("confidential") ? "Customer confidential" : "Unknown";
+  const suggested_route = isStatusUpdate ? "Ops" : wantsDemo ? "Sales clarification first; then Software discovery if scoped" : "Sales + Ops + Security before Software discovery";
+
+  return {
+    clean_title: wantsDemo
+      ? "Demo request — needs scope clarification"
+      : isStatusUpdate
+        ? "Status update request — route to Ops"
+        : "Clarify request before software review",
+    summary: wantsDemo
+      ? "Sales wants a demo but scope and success criteria are unclear. Clarify before routing to Software."
+      : isStatusUpdate
+        ? "Customer wants an ETA/status update. Ops should confirm before any customer-facing commitment."
+        : "Request lacks enough detail to safely interrupt Software. Collect missing inputs first.",
+    request_type: wantsDemo ? "Internal demo request" : isStatusUpdate ? "Customer status update" : "Customer RFI triage",
+    urgency: isStatusUpdate ? "High" : "Unknown",
+    business_value: wantsDemo ? "Medium" : "Unknown",
+    technical_complexity: wantsDemo ? "Medium" : "Unknown",
+    sensitivity,
+    missing_information: Array.from(new Set(missing)).slice(0, 6),
+    suggested_route,
+    suggested_next_action: "Ask Sales to provide the missing inputs, then route to the appropriate owner for review.",
+    software_interrupt_allowed: false,
+    draft_clarification_to_sales:
+      "Before Software reviews, please provide the missing details (customer/opportunity, exact ask, decision owner, and any sensitive handling constraints).",
+    risk_flags: [
+      ...(isDefence ? ["Defence-sensitive context requires human approval"] : []),
+      ...(isCommitment ? ["Risk of unapproved customer commitment"] : []),
+      ...(isStatusUpdate ? ["Risk of committing to an unconfirmed date"] : []),
+    ].slice(0, 4),
+    recommended_status: isStatusUpdate ? "Route to Ops" : "Ask Sales for clarification",
+    audit_notes: ["Local fallback used due to model timeout", ...mockedContextSnippets.slice(0, 2).map((s) => `Used ${s.title}`)].slice(0, 5),
+    confidence: 0.55,
+  };
 }
 
 function readLocalNvidiaKey() {
@@ -230,6 +280,8 @@ export async function POST(request: Request) {
   const cacheTtlMs = readEnvInt("AI_CACHE_TTL_MS", DEFAULT_CACHE_TTL_MS);
   const maxTokens = readEnvInt("AI_MAX_TOKENS", DEFAULT_MAX_TOKENS);
   const enableFallback = (process.env.AI_ENABLE_FALLBACK ?? (DEFAULT_ENABLE_FALLBACK ? "1" : "0")) === "1";
+  const enableLocalFallback =
+    (process.env.AI_ENABLE_LOCAL_FALLBACK ?? (DEFAULT_ENABLE_LOCAL_FALLBACK ? "1" : "0")) === "1";
   const debugTimings = process.env.AI_DEBUG_TIMINGS === "1";
   const timestamp = new Date().toISOString();
   const t0 = nowMs();
@@ -298,6 +350,19 @@ export async function POST(request: Request) {
     } catch (error) {
       // Fail fast by default. The "fallback" retry is optional because it doubles worst-case latency.
       if (!enableFallback) {
+        if (enableLocalFallback && error instanceof Error && error.message === "Request was aborted.") {
+          const fallback = buildLocalFallbackTriage(requestText);
+          const result = triageSchema.parse(fallback);
+          const safetyResult = runSafetyChecks(parsedRequest.data.requestText, result);
+          return NextResponse.json({
+            result,
+            safetyResult,
+            model: "local-fallback",
+            timestamp,
+            cache: { hit: false, ttlMs: cacheTtlMs },
+            ...(debugTimings ? { timings: { totalMs: nowMs() - t0, modelCallMs: timeoutMs, parseAndEvalMs: 0 } } : null),
+          });
+        }
         throw error;
       }
 
