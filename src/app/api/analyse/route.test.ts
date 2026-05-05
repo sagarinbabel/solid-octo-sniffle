@@ -10,7 +10,7 @@ vi.mock("openai", () => ({
 }));
 
 describe("POST /api/analyse", () => {
-  const originalKey = process.env.OPENAI_API_KEY;
+  const originalKey = process.env.NVIDIA_API_KEY;
   const originalModel = process.env.AI_MODEL;
   const originalNodeEnv = process.env.NODE_ENV;
   const envLocalPath = join(process.cwd(), ".env.local");
@@ -33,9 +33,9 @@ describe("POST /api/analyse", () => {
       writeFileSync(envLocalPath, originalEnvLocal);
     }
     if (originalKey) {
-      process.env.OPENAI_API_KEY = originalKey;
+      process.env.NVIDIA_API_KEY = originalKey;
     } else {
-      delete process.env.OPENAI_API_KEY;
+      delete process.env.NVIDIA_API_KEY;
     }
     if (originalModel) {
       process.env.AI_MODEL = originalModel;
@@ -48,8 +48,8 @@ describe("POST /api/analyse", () => {
     }
   });
 
-  it("ignores shell OPENAI_API_KEY and requires .env.local", async () => {
-    process.env.OPENAI_API_KEY = "shell-key-should-not-be-used";
+  it("ignores shell NVIDIA_API_KEY and requires .env.local", async () => {
+    process.env.NVIDIA_API_KEY = "shell-key-should-not-be-used";
 
     const response = await POST(
       new Request("http://localhost/api/analyse", {
@@ -63,15 +63,15 @@ describe("POST /api/analyse", () => {
     expect(response.status).toBe(500);
     await expect(response.json()).resolves.toEqual({
       error:
-        "OpenAI API key is missing from .env.local. This prototype intentionally ignores shell environment keys. Create .env.local from .env.example, add OPENAI_API_KEY, then restart npm run dev.",
+        "NVIDIA NIM API key is missing from .env.local. This prototype intentionally ignores shell environment keys. Create .env.local from .env.example, add NVIDIA_API_KEY, then restart npm run dev.",
     });
     expect(openAiConstructor).not.toHaveBeenCalled();
   });
 
   it("validates model JSON and returns safety checks for the server-side LLM flow", async () => {
-    process.env.OPENAI_API_KEY = "shell-key-should-not-be-used";
+    process.env.NVIDIA_API_KEY = "shell-key-should-not-be-used";
     process.env.AI_MODEL = "test-model";
-    writeFileSync(envLocalPath, "OPENAI_API_KEY=test-local-file-key\nAI_MODEL=gpt-4.1-mini\n");
+    writeFileSync(envLocalPath, "NVIDIA_API_KEY=test-local-file-key\nAI_MODEL=deepseek-ai/deepseek-v4-pro\n");
     openAiConstructor.mockImplementation(function OpenAI() {
       return {
         chat: {
@@ -125,12 +125,15 @@ describe("POST /api/analyse", () => {
     expect(payload.result.sensitivity).toBe("Defence-sensitive");
     expect(payload.safetyResult.score).toBe(100);
     expect(JSON.stringify(payload)).not.toContain("test-local-file-key");
-    expect(openAiConstructor).toHaveBeenCalledWith({ apiKey: "test-local-file-key" });
+    expect(openAiConstructor).toHaveBeenCalledWith({
+      apiKey: "test-local-file-key",
+      baseURL: "https://integrate.api.nvidia.com/v1",
+    });
   });
 
   it("uses server environment variables in production for hosted deployment", async () => {
     vi.stubEnv("NODE_ENV", "production");
-    process.env.OPENAI_API_KEY = "production-host-key";
+    process.env.NVIDIA_API_KEY = "production-host-key";
     process.env.AI_MODEL = "production-model";
     openAiConstructor.mockImplementation(function OpenAI() {
       return {
@@ -181,6 +184,9 @@ describe("POST /api/analyse", () => {
     const payload = await response.json();
     expect(payload.model).toBe("production-model");
     expect(JSON.stringify(payload)).not.toContain("production-host-key");
-    expect(openAiConstructor).toHaveBeenCalledWith({ apiKey: "production-host-key" });
+    expect(openAiConstructor).toHaveBeenCalledWith({
+      apiKey: "production-host-key",
+      baseURL: "https://integrate.api.nvidia.com/v1",
+    });
   });
 });

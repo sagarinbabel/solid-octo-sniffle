@@ -13,10 +13,12 @@ const requestSchema = z.object({
   requestText: z.string().trim().min(8, "Request text is required").max(8000),
 });
 
+const NIM_BASE_URL = "https://integrate.api.nvidia.com/v1";
+
 const missingLocalKeyError =
-  "OpenAI API key is missing from .env.local. This prototype intentionally ignores shell environment keys. Create .env.local from .env.example, add OPENAI_API_KEY, then restart npm run dev.";
+  "NVIDIA NIM API key is missing from .env.local. This prototype intentionally ignores shell environment keys. Create .env.local from .env.example, add NVIDIA_API_KEY, then restart npm run dev.";
 const missingProductionKeyError =
-  "OpenAI API key is missing from the server environment. Add OPENAI_API_KEY in your hosting provider's secure environment variable settings and redeploy.";
+  "NVIDIA NIM API key is missing from the server environment. Add NVIDIA_API_KEY in your hosting provider's secure environment variable settings and redeploy.";
 
 const SYSTEM_PROMPT = `You are an internal AI request triage assistant for a dual-use deep-tech company. Your job is to protect software and operations teams from vague requests while helping Sales get useful answers faster. Turn messy customer/internal requests into structured, reviewable work. Do not promise feasibility. Do not allow direct software interruption unless the request is clear, urgent, and sufficiently specified. Flag missing information. Flag defence/customer-sensitive topics. Prefer asking for clarification before routing vague work to Software. Output valid JSON only.`;
 
@@ -70,34 +72,34 @@ function extractJson(content: string) {
   return match[0];
 }
 
-function readLocalOpenAiKey() {
+function readLocalNvidiaKey() {
   const envPath = join(process.cwd(), ".env.local");
   if (!existsSync(envPath)) {
     return "";
   }
 
   const envFile = readFileSync(envPath, "utf8");
-  const match = envFile.match(/^OPENAI_API_KEY=(.*)$/m);
+  const match = envFile.match(/^NVIDIA_API_KEY=(.*)$/m);
   const rawValue = match?.[1]?.trim() ?? "";
   return rawValue.replace(/^['"]|['"]$/g, "");
 }
 
-function readOpenAiKey() {
+function readNvidiaKey() {
   if (process.env.NODE_ENV === "production") {
     return {
-      apiKey: process.env.OPENAI_API_KEY?.trim() ?? "",
+      apiKey: process.env.NVIDIA_API_KEY?.trim() ?? "",
       missingKeyError: missingProductionKeyError,
     };
   }
 
   return {
-    apiKey: readLocalOpenAiKey(),
+    apiKey: readLocalNvidiaKey(),
     missingKeyError: missingLocalKeyError,
   };
 }
 
 export async function POST(request: Request) {
-  const model = process.env.AI_MODEL || "gpt-4.1-mini";
+  const model = process.env.AI_MODEL || "deepseek-ai/deepseek-v4-pro";
   const timestamp = new Date().toISOString();
 
   try {
@@ -111,15 +113,18 @@ export async function POST(request: Request) {
       );
     }
 
-    const { apiKey: openAiApiKey, missingKeyError } = readOpenAiKey();
-    if (!openAiApiKey) {
+    const { apiKey: nvidiaApiKey, missingKeyError } = readNvidiaKey();
+    if (!nvidiaApiKey) {
       return NextResponse.json(
         { error: missingKeyError },
         { status: 500 },
       );
     }
 
-    const openai = new OpenAI({ apiKey: openAiApiKey });
+    const openai = new OpenAI({
+      apiKey: nvidiaApiKey,
+      baseURL: NIM_BASE_URL,
+    });
 
     const completion = await openai.chat.completions.create({
       model,

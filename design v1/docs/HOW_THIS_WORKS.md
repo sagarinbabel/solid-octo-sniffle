@@ -12,8 +12,8 @@ Sales Portal | Head of Software Queue | How it Works
 
 1. Sales submits a customer or internal request in plain language.
 2. The frontend sends the request brief to the server-only `/api/analyse` route.
-3. In local development, the server reads `NVIDIA_API_KEY` directly from `.env.local` and ignores shell-exported keys.
-4. In production, the server reads `NVIDIA_API_KEY` from the host's secure server-side environment variables, such as Vercel Project Settings.
+3. In local development, the server reads `OPENAI_API_KEY` directly from `.env.local` and ignores shell-exported keys.
+4. In production, the server reads `OPENAI_API_KEY` from the host's secure server-side environment variables, such as Vercel Project Settings.
 5. The server adds mocked context snippets and calls the configured LLM.
 6. The model returns structured triage JSON.
 7. Zod validates the response shape.

@@ -88,7 +88,7 @@ flowchart TD
 
 - In local development, the API key is loaded server-side only from `.env.local`.
 - In production, the API key is loaded from the host's server-side environment variables, such as Vercel Project Settings.
-- Shell-exported `OPENAI_API_KEY` values are intentionally ignored during local development for safety.
+- Shell-exported `NVIDIA_API_KEY` values are intentionally ignored during local development for safety.
 - `.env.local` is ignored.
 - No confidential Kelluu data is used.
 - No external actions are taken.
@@ -101,7 +101,7 @@ flowchart TD
 ```bash
 npm install
 cp .env.example .env.local
-# add OPENAI_API_KEY to .env.local
+# add NVIDIA_API_KEY to .env.local
 npm run dev
 ```
 
@@ -112,11 +112,11 @@ Open http://localhost:3000.
 Copy `.env.example` to `.env.local`, then add your key:
 
 ```bash
-OPENAI_API_KEY=your_server_side_key
-AI_MODEL=gpt-4.1-mini
+NVIDIA_API_KEY=your_server_side_key
+AI_MODEL=deepseek-ai/deepseek-v4-pro
 ```
 
-Never use `NEXT_PUBLIC_OPENAI_API_KEY`. The browser calls `/api/analyse`; only the server route calls OpenAI. Local development reads `OPENAI_API_KEY` from `.env.local` and ignores keys exported in your shell environment. Production reads `OPENAI_API_KEY` from secure server-side hosting settings.
+Never use `NEXT_PUBLIC_NVIDIA_API_KEY`. The browser calls `/api/analyse`; only the server route calls NVIDIA NIM. Local development reads `NVIDIA_API_KEY` from `.env.local` and ignores keys exported in your shell environment. Production reads `NVIDIA_API_KEY` from secure server-side hosting settings.
 
 ## How to test locally
 
@@ -131,7 +131,7 @@ npm run build
 Manual paths:
 
 1. App startup: run `npm install`, `cp .env.example .env.local`, and `npm run dev`; expect the Sales Portal at http://localhost:3000.
-2. Missing API key: remove `OPENAI_API_KEY` from `.env.local`, restart dev server, click “Submit for AI triage”; expect a clear missing-key error and no stack trace.
+2. Missing API key: remove `NVIDIA_API_KEY` from `.env.local`, restart dev server, click “Submit for AI triage”; expect a clear missing-key error and no stack trace.
 3. Sales Portal: fill the customer/opportunity, request summary, deadline, software/ops need, commitment, and sensitivity fields.
 4. Head of Software Queue: verify submitted/seeded requests show status, deadline, sensitivity, missing info count, and suggested route.
 5. Queue detail: verify original request, clean title, summary, urgency, business value, technical complexity, suggested next action, software-interrupt gate, clarification draft, risk flags, recommended status, safety checks, and audit trail.
@@ -140,7 +140,7 @@ Manual paths:
 
 ## Production deployment notes
 
-- Set `OPENAI_API_KEY` and `AI_MODEL` as environment variables in Vercel.
+- Set `NVIDIA_API_KEY` and `AI_MODEL` as environment variables in Vercel.
 - Never expose the API key to the browser.
 - Do not commit `.env.local`; production secrets belong in Vercel Project Settings or a secrets manager.
 - Configure domain and deployment environment.
