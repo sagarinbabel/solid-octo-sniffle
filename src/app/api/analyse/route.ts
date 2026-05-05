@@ -25,6 +25,7 @@ const DEFAULT_MAX_TOKENS = 220;
 const DEFAULT_ENABLE_FALLBACK = false;
 const DEFAULT_CONTEXT_CHARS = 80;
 const DEFAULT_ENABLE_LOCAL_FALLBACK = true;
+const DEFAULT_FORCE_LOCAL = false;
 
 const missingLocalKeyError =
   "NVIDIA NIM API key is missing from .env.local. This prototype intentionally ignores shell environment keys. Create .env.local from .env.example, add NVIDIA_API_KEY, then restart npm run dev.";
@@ -282,6 +283,7 @@ export async function POST(request: Request) {
   const enableFallback = (process.env.AI_ENABLE_FALLBACK ?? (DEFAULT_ENABLE_FALLBACK ? "1" : "0")) === "1";
   const enableLocalFallback =
     (process.env.AI_ENABLE_LOCAL_FALLBACK ?? (DEFAULT_ENABLE_LOCAL_FALLBACK ? "1" : "0")) === "1";
+  const forceLocal = (process.env.AI_FORCE_LOCAL ?? (DEFAULT_FORCE_LOCAL ? "1" : "0")) === "1";
   const debugTimings = process.env.AI_DEBUG_TIMINGS === "1";
   const timestamp = new Date().toISOString();
   const t0 = nowMs();
@@ -295,6 +297,21 @@ export async function POST(request: Request) {
         { error: "Enter a request with enough detail to triage." },
         { status: 400 },
       );
+    }
+
+    if (forceLocal) {
+      const requestText = parsedRequest.data.requestText;
+      const fallback = buildLocalFallbackTriage(requestText);
+      const result = triageSchema.parse(fallback);
+      const safetyResult = runSafetyChecks(requestText, result);
+      return NextResponse.json({
+        result,
+        safetyResult,
+        model: "local-fallback",
+        timestamp,
+        cache: { hit: false, ttlMs: cacheTtlMs },
+        ...(debugTimings ? { timings: { totalMs: nowMs() - t0, modelCallMs: 0, parseAndEvalMs: 0 } } : null),
+      });
     }
 
     const { apiKey: nvidiaApiKey, missingKeyError } = readNvidiaKey();
