@@ -74,7 +74,7 @@ function Editorial() {
       {/* Masthead */}
       <header style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", paddingBottom: 24, borderBottom: "1px solid #1A1814" }}>
         <div>
-          <div style={{ fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase", color: "#8A8276", fontWeight: 600 }}>Kelluu · Internal</div>
+          <div style={{ fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase", color: "#8A8276", fontWeight: 600 }}>airship company · Internal</div>
           <h1 style={{ fontFamily: "'Source Serif 4', Georgia, serif", fontSize: 38, fontWeight: 500, margin: "8px 0 0", letterSpacing: -0.5 }}>AI supported Request Triage</h1>
         </div>
         <nav style={{ display: "flex", gap: 28, fontSize: 14 }}>

@@ -600,12 +600,12 @@ export default function Home() {
               </Card>
               <Card title="Prototype boundary" eyebrow="Safety">
                 <p>
-                  This prototype uses a live server-side LLM call, mocked context, Zod validation, local safety checks, and no real Kelluu
-                  data.
+                  This prototype uses a live server-side LLM call, mocked context, Zod validation, local safety checks, and no real airship
+                  company data.
                 </p>
                 <div className="mt-5 grid gap-3 md:grid-cols-2">
                   <Metric label="LLM calls" value="Server-side only through /api/analyse" />
-                  <Metric label="Data" value="Mocked, no confidential Kelluu data" />
+                  <Metric label="Data" value="Mocked, no confidential airship company data" />
                   <Metric label="Safety" value="Local checks shown in Head of Software Queue" />
                   <Metric label="Actions" value="Local status updates only" />
                 </div>

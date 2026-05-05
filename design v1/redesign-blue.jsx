@@ -478,7 +478,7 @@ function MethodScreen() {
           <ul style={{ margin: "16px 0 0", padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 12, fontSize: 14, lineHeight: 1.55 }}>
             <li>· Make customer-facing commitments</li>
             <li>· Auto-route to Software without human sign-off</li>
-            <li>· See real Kelluu data — context is mocked</li>
+            <li>· See real airship company data — context is mocked</li>
             <li>· Replace the reviewer's judgment</li>
           </ul>
         </div>
