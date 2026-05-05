@@ -103,7 +103,7 @@ Manual checks:
 
 ## Security boundary
 
-- No Kelluu confidential data is used.
+- No airship company confidential data is used.
 - Mocked context is hardcoded and labeled mocked.
 - No external action is taken.
 - No CRM, ERP, ticketing, repo, or internal-doc integration is implemented.

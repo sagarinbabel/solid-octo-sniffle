@@ -31,4 +31,4 @@ Sales Portal | Head of Software Queue | How it Works
 
 ## Prototype boundary
 
-This prototype uses a live server-side LLM call, mocked context, Zod validation, local safety checks, and no real Kelluu data. It does not connect to CRM, ERP, ticketing, repos, internal docs, production systems, or persistent audit storage.
+This prototype uses a live server-side LLM call, mocked context, Zod validation, local safety checks, and no real airship company data. It does not connect to CRM, ERP, ticketing, repos, internal docs, production systems, or persistent audit storage.
