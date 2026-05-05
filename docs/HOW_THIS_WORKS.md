@@ -8,6 +8,13 @@ Turns messy sales/customer requests into structured, reviewable work for softwar
 
 Sales Portal | Head of Software Queue | How it Works
 
+## Two entry points (main vs `/prototype`)
+
+- The main app flow (the default navigation) demonstrates the request triage workflow.
+- The `/prototype` route is an alternative UI for the same workflow. It includes a toggle that can switch between:
+  - live API calls to `/api/analyse`, and
+  - demo mode that marks up requests with known-good structured outputs when the endpoint is acting up.
+
 ## Workflow
 
 1. Sales submits a customer or internal request in plain language.

@@ -82,6 +82,32 @@ NVIDIA_API_KEY=your_server_side_key
 AI_MODEL=deepseek-ai/deepseek-v4-pro
 ```
 
+Optional tuning knobs for `/api/analyse`:
+
+```bash
+# Model selection
+AI_MODEL=meta/llama-3.2-1b-instruct
+AI_MODEL_FALLBACK=meta/llama-3.1-8b-instruct
+
+# Latency / resilience
+AI_TIMEOUT_MS=12000
+AI_MAX_TOKENS=220
+
+# Demo cache (in-memory per server process)
+AI_CACHE_TTL_MS=60000
+
+# Response payload includes timings when enabled
+AI_DEBUG_TIMINGS=1
+```
+
+Defaults (if unset):
+
+- `AI_MODEL`: `meta/llama-3.2-1b-instruct`
+- `AI_MODEL_FALLBACK`: `meta/llama-3.1-8b-instruct` (used when the primary call times out or the response fails JSON parsing/shape)
+- `AI_TIMEOUT_MS`: `12000`
+- `AI_MAX_TOKENS`: `220`
+- `AI_CACHE_TTL_MS`: `60000`
+
 Do not create `NEXT_PUBLIC_NVIDIA_API_KEY`. The API key must stay server-side. For local development, the API route intentionally reads `NVIDIA_API_KEY` from `.env.local` only and ignores shell-exported keys, so accidental terminal environment secrets are not used.
 
 ## Testing

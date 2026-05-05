@@ -118,6 +118,19 @@ AI_MODEL=deepseek-ai/deepseek-v4-pro
 
 Never use `NEXT_PUBLIC_NVIDIA_API_KEY`. The browser calls `/api/analyse`; only the server route calls NVIDIA NIM. Local development reads `NVIDIA_API_KEY` from `.env.local` and ignores keys exported in your shell environment. Production reads `NVIDIA_API_KEY` from secure server-side hosting settings.
 
+## Optional `/api/analyse` tuning
+
+The server route supports optional environment variables to tune latency and defaults:
+
+```bash
+AI_MODEL=meta/llama-3.2-1b-instruct
+AI_MODEL_FALLBACK=meta/llama-3.1-8b-instruct
+AI_TIMEOUT_MS=12000
+AI_MAX_TOKENS=220
+AI_CACHE_TTL_MS=60000
+AI_DEBUG_TIMINGS=1
+```
+
 ## How to test locally
 
 Run automated checks:

@@ -22,6 +22,8 @@ const DEFAULT_TIMEOUT_MS = 12_000;
 const DEFAULT_CACHE_TTL_MS = 60_000;
 const DEFAULT_CACHE_MAX_ENTRIES = 100;
 const DEFAULT_MAX_TOKENS = 220;
+const DEFAULT_ENABLE_FALLBACK = false;
+const DEFAULT_CONTEXT_CHARS = 80;
 
 const missingLocalKeyError =
   "NVIDIA NIM API key is missing from .env.local. This prototype intentionally ignores shell environment keys. Create .env.local from .env.example, add NVIDIA_API_KEY, then restart npm run dev.";
@@ -39,8 +41,28 @@ Rules:
 
 function buildUserPrompt(requestText: string) {
   const context = mockedContextSnippets
-    .map((item) => `MOCKED CONTEXT - ${item.title}: ${item.body.slice(0, 180)}`)
+    .map((item) => `MOCKED CONTEXT - ${item.title}: ${item.body.slice(0, DEFAULT_CONTEXT_CHARS)}`)
     .join("\n");
+
+  const example = `Example output (shape only; do not copy text verbatim):
+{
+  "clean_title": "Monitoring report ETA request",
+  "summary": "Customer wants a delivery ETA; route to Ops and avoid committing dates without confirmation.",
+  "request_type": "Customer status update",
+  "urgency": "High",
+  "business_value": "Low",
+  "technical_complexity": "Low",
+  "sensitivity": "Customer confidential",
+  "missing_information": ["Customer ID", "Which report / time range", "Preferred tone (formal/casual)"],
+  "suggested_route": "Ops",
+  "suggested_next_action": "Forward to Ops for ETA, then reply to customer with an approved status update.",
+  "software_interrupt_allowed": true,
+  "draft_clarification_to_sales": "Ops to confirm ETA; please share customer ID and which report they mean.",
+  "risk_flags": ["Risk of committing to an unconfirmed date"],
+  "recommended_status": "Route to Ops",
+  "audit_notes": ["Used MOCKED Sales RFI Intake Checklist", "Used MOCKED Customer Commitment Policy"],
+  "confidence": 0.75
+}`;
 
   return `Triage the request for Head of Software review using ONLY the submitted request + mocked context.
 Include relevant mocked context TITLES in audit_notes (do not claim they are real).
@@ -57,6 +79,8 @@ Return a single JSON object with exactly these keys:
 clean_title, summary, request_type, urgency, business_value, technical_complexity, sensitivity,
 missing_information, suggested_route, suggested_next_action, software_interrupt_allowed,
 draft_clarification_to_sales, risk_flags, recommended_status, audit_notes, confidence.
+
+${example}
 
 ${context}
 
@@ -75,6 +99,16 @@ function extractJson(content: string) {
     throw new Error("Model did not return JSON");
   }
   return match[0];
+}
+
+function coerceJsonObject(raw: string) {
+  // Some models return a JSON object but include leading/trailing junk or control chars.
+  // We already slice out the first {...} block; now normalize common issues.
+  const cleaned = raw
+    .replace(/^\uFEFF/, "")
+    .replace(/\u0000/g, "")
+    .trim();
+  return cleaned;
 }
 
 function readLocalNvidiaKey() {
@@ -195,6 +229,7 @@ export async function POST(request: Request) {
   const timeoutMs = readEnvInt("AI_TIMEOUT_MS", DEFAULT_TIMEOUT_MS);
   const cacheTtlMs = readEnvInt("AI_CACHE_TTL_MS", DEFAULT_CACHE_TTL_MS);
   const maxTokens = readEnvInt("AI_MAX_TOKENS", DEFAULT_MAX_TOKENS);
+  const enableFallback = (process.env.AI_ENABLE_FALLBACK ?? (DEFAULT_ENABLE_FALLBACK ? "1" : "0")) === "1";
   const debugTimings = process.env.AI_DEBUG_TIMINGS === "1";
   const timestamp = new Date().toISOString();
   const t0 = nowMs();
@@ -249,9 +284,23 @@ export async function POST(request: Request) {
       completion = await createCompletionWithTimeout({ openai, model: primaryModel, messages, timeoutMs, maxTokens });
       const content = completion.choices[0]?.message?.content;
       if (!content) throw new Error("Model returned no content");
-      rawJson = JSON.parse(extractJson(content));
+      try {
+        rawJson = JSON.parse(coerceJsonObject(extractJson(content)));
+      } catch (err) {
+        if (debugTimings) {
+          console.error("Model content not JSON (primary)", {
+            model: primaryModel,
+            preview: content.slice(0, 280),
+          });
+        }
+        throw err;
+      }
     } catch (error) {
-      // Retry once with a slightly larger model if we time out or fail JSON parsing/shape.
+      // Fail fast by default. The "fallback" retry is optional because it doubles worst-case latency.
+      if (!enableFallback) {
+        throw error;
+      }
+
       modelUsed = fallbackModel;
       completion = await createCompletionWithTimeout({
         openai,
@@ -261,10 +310,18 @@ export async function POST(request: Request) {
         maxTokens: Math.max(180, Math.floor(maxTokens * 0.75)),
       });
       const content = completion.choices[0]?.message?.content;
-      if (!content) {
-        throw error instanceof Error ? error : new Error("Model returned no content");
+      if (!content) throw new Error("Model returned no content");
+      try {
+        rawJson = JSON.parse(coerceJsonObject(extractJson(content)));
+      } catch (err) {
+        if (debugTimings) {
+          console.error("Model content not JSON (fallback)", {
+            model: fallbackModel,
+            preview: content.slice(0, 280),
+          });
+        }
+        throw err;
       }
-      rawJson = JSON.parse(extractJson(content));
     }
     const tModelEnd = nowMs();
 
@@ -299,14 +356,15 @@ export async function POST(request: Request) {
 
     return NextResponse.json(payload);
   } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error";
     console.error("Analyse route failed", {
-      message: error instanceof Error ? error.message : "Unknown error",
+      message,
       model: process.env.AI_MODEL || DEFAULT_PRIMARY_MODEL,
       timestamp,
     });
 
     return NextResponse.json(
-      { error: "Triage failed safely. Check the server logs and try again." },
+      { error: debugTimings ? message : "Triage failed safely. Check the server logs and try again." },
       { status: 500 },
     );
   }

@@ -57,7 +57,7 @@ flowchart TD
 2. The browser sends a composed request brief to `/api/analyse`.
 3. The server route validates input.
 4. The server attaches hardcoded mocked context snippets.
-5. The server calls the OpenAI SDK using `OPENAI_API_KEY` from server-side environment variables.
+5. The server calls the NVIDIA NIM OpenAI-compatible endpoint using `NVIDIA_API_KEY` from server-side environment variables.
 6. The model returns the exact triage JSON shape.
 7. The server parses and validates JSON with Zod.
 8. Local safety checks run server-side.
@@ -69,7 +69,7 @@ flowchart TD
 ```bash
 npm install
 cp .env.example .env.local
-# add OPENAI_API_KEY to .env.local
+# add NVIDIA_API_KEY to .env.local
 npm run dev
 ```
 
@@ -78,11 +78,11 @@ Open `http://localhost:3000`.
 ## Environment variables
 
 ```bash
-OPENAI_API_KEY=your_server_side_key
-AI_MODEL=gpt-4.1-mini
+NVIDIA_API_KEY=your_server_side_key
+AI_MODEL=deepseek-ai/deepseek-v4-pro
 ```
 
-Do not create `NEXT_PUBLIC_OPENAI_API_KEY`. The API key must stay server-side. For local development, the API route intentionally reads `OPENAI_API_KEY` from `.env.local` only and ignores shell-exported keys, so accidental terminal environment secrets are not used.
+Do not create `NEXT_PUBLIC_NVIDIA_API_KEY`. The API key must stay server-side. For local development, the API route intentionally reads `NVIDIA_API_KEY` from `.env.local` only and ignores shell-exported keys, so accidental terminal environment secrets are not used.
 
 ## Testing
 
@@ -107,9 +107,9 @@ Manual checks:
 - Mocked context is hardcoded and labeled mocked.
 - No external action is taken.
 - No CRM, ERP, ticketing, repo, or internal-doc integration is implemented.
-- In local development, the server reads `OPENAI_API_KEY` from `.env.local` only.
-- In production, the server reads `OPENAI_API_KEY` from the host's encrypted server-side environment settings, such as Vercel Environment Variables.
-- The browser never receives the OpenAI API key.
+- In local development, the server reads `NVIDIA_API_KEY` from `.env.local` only.
+- In production, the server reads `NVIDIA_API_KEY` from the host's encrypted server-side environment settings, such as Vercel Environment Variables.
+- The browser never receives the NVIDIA API key.
 - Production use would require auth, audit storage, approved model gateway, monitoring, and security review.
 
 ## On-prem and confidential deployment note
